@@ -66,13 +66,21 @@ public class UserService {
             return code;
         }
 
-        User user = User.builder()
-                .id(request.getId())
-                .name(request.getName())
-                .pass(request.getPassword())
-                .phoneNumber(request.getPhoneNumber())
-                .build();
+        User.UserBuilder userBuilder = User.builder();
+        if(request.getId() != null){
+            userBuilder.id(request.getId());
+        }
+        if(request.getName() != null){
+            userBuilder.name(request.getName());
+        }
+        if(request.getPassword() != null){
+            userBuilder.pass(request.getPassword());
+        }
+        if(request.getPhoneNumber() != null){
+            userBuilder.phoneNumber(request.getPhoneNumber());
+        }
 
+        User user = userBuilder.build();
         userRepo.save(user);
         return null;
     }
@@ -93,6 +101,8 @@ public class UserService {
         if (StringUtils.notNullOrEmpty(request.getPhoneNumber()) && !StringUtils.isNumeric(request.getPhoneNumber())) {
             return Constant.SAVE_USER_REQUEST_PHONE_INVALID;
         }
+
+
 
         return null;
     }
@@ -123,7 +133,7 @@ public class UserService {
     }
 
     public Long delete(Long userId){
-       User user = userRepo.getReferenceById(userId);
+       User user = userRepo.getById(userId);
        if(user == null){
            return Constant.USER_NOT_EXIST;
        }
