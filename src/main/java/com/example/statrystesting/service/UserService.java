@@ -52,7 +52,7 @@ public class UserService {
 
         User user = User.builder()
                 .name(request.getName())
-                .password(request.getPassword())
+                .pass(request.getPassword())
                 .phoneNumber(request.getPhoneNumber())
                 .build();
 
@@ -69,7 +69,7 @@ public class UserService {
         User user = User.builder()
                 .id(request.getId())
                 .name(request.getName())
-                .password(request.getPassword())
+                .pass(request.getPassword())
                 .phoneNumber(request.getPhoneNumber())
                 .build();
 
