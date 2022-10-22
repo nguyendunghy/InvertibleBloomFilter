@@ -102,7 +102,10 @@ public class UserService {
             return Constant.SAVE_USER_REQUEST_PHONE_INVALID;
         }
 
-
+        User user = userRepo.findById(request.getId()).orElse(null);
+        if(user == null){
+            return Constant.USER_NOT_EXIST;
+        }
 
         return null;
     }
@@ -133,7 +136,7 @@ public class UserService {
     }
 
     public Long delete(Long userId){
-       User user = userRepo.getById(userId);
+       User user = userRepo.findById(userId).orElse(null);
        if(user == null){
            return Constant.USER_NOT_EXIST;
        }
