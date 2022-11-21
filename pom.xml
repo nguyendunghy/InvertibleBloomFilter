@@ -25,6 +25,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web-services</artifactId>
@@ -42,6 +47,11 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc8</artifactId>
+            <version>21.7.0.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
@@ -52,10 +62,16 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.teradata.jdbc</groupId>
-            <artifactId>terajdbc</artifactId>
-            <version>4</version>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.85.Final</version>
         </dependency>
+
+        <!--        <dependency>-->
+<!--            <groupId>com.teradata.jdbc</groupId>-->
+<!--            <artifactId>terajdbc</artifactId>-->
+<!--            <version>4</version>-->
+<!--        </dependency>-->
 
 <!--        <dependency>-->
 <!--            <groupId>com.teradata.jdbc</groupId>-->
