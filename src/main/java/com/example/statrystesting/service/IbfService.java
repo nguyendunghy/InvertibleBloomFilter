@@ -1,5 +1,6 @@
 package com.example.statrystesting.service;
 
+import com.example.statrystesting.entity.DataTable;
 import com.example.statrystesting.entity.IbfData;
 import com.example.statrystesting.ibf.InvertibleBloomFilter;
 import com.example.statrystesting.repo.IbfDataRepo;
@@ -12,19 +13,21 @@ import java.util.List;
 public class IbfService {
     @Autowired
     private IbfDataRepo ibfDataRepo;
-    public InvertibleBloomFilter get()  {
+    public void streamIbfData(InvertibleBloomFilter invertibleBloomFilter)  {
         try{
-            ibfDataRepo.streamIbfData();
+            ibfDataRepo.streamIbfData(invertibleBloomFilter);
             Thread.sleep(3000);
         }catch (Exception e){
             e.printStackTrace();
         }
-        return ibfDataRepo.getInvertibleBloomFilter();
     }
 
     public List<IbfData> findAll(){
         return ibfDataRepo.findAll();
     }
 
+    public List<DataTable> retrieveAllData(String rowHash){
+        return ibfDataRepo.retrieveAllData( rowHash);
+    }
 
 }

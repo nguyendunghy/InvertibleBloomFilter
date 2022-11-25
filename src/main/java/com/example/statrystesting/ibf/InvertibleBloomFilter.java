@@ -2,6 +2,7 @@ package com.example.statrystesting.ibf;
 
 import com.example.statrystesting.entity.IbfData;
 import io.netty.buffer.ByteBuf;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -226,7 +227,35 @@ public class InvertibleBloomFilter {
             throw new IllegalArgumentException(
                     String.format("key length mismatch: %d != %d", keyLengthsSum, other.keyLengthsSum));
     }
+    public InvertibleBloomFilter copy() {
+        InvertibleBloomFilter _clone = new InvertibleBloomFilter(keyLengthsSum, divisors);
+        for (int cellIndex = 0; cellIndex < cells.length; cellIndex++) {
+            _clone.cells[cellIndex] = cells[cellIndex].copy();
+        }
+        return _clone;
+    }
 
+    public String toPrettyString() {
+        StringBuilder sb = new StringBuilder("");
+        sb.append(StringUtils.rightPad("index", 6, ' ') + ": ");
+        Cell[] _cells = cells;
+        for (int index = 0; index < _cells.length; index++) {
+            sb.append(StringUtils.rightPad((isPureCell(index) ? "*" : "") + String.valueOf(index), 5, ' '));
+        }
+        sb.append("\n");
+        sb.append(StringUtils.rightPad("count", 6, ' ') + ": ");
+        for (int index = 0; index < _cells.length; index++) {
+            Cell cell = _cells[index];
+            sb.append(StringUtils.rightPad(String.valueOf(cell.getCount()), 5, ' '));
+        }
+        sb.append("\n");
+        sb.append(StringUtils.rightPad("value", 6, ' ') + ": ");
+        for (int index = 0; index < _cells.length; index++) {
+            Cell cell = _cells[index];
+            sb.append(StringUtils.rightPad(String.valueOf(cell.rowHashSum() == 0 ? "N/A" : cell.rowHashSum()), 5, ' '));
+        }
+        return sb.toString();
+    }
     /**
      * NOTE: If you are going to modify this serializer, please make sure to add a way to migrate all the stored IBFs.
      * Otherwise, all the existing connectors that use Ibf will be broken.
@@ -272,7 +301,7 @@ public class InvertibleBloomFilter {
             }
         }
 
-        
+
 //        @Override
         public String getName() {
             return "InvertibleBloomFilter";

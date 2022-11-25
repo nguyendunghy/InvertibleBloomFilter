@@ -1,5 +1,6 @@
 package com.example.statrystesting.repo.impl;
 
+import com.example.statrystesting.entity.DataTable;
 import com.example.statrystesting.entity.IbfData;
 import com.example.statrystesting.ibf.InvertibleBloomFilter;
 import com.example.statrystesting.repo.IbfDataRepo;
@@ -10,15 +11,16 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 import static com.example.statrystesting.repo.Sql.IBF_QUERY;
+import static com.example.statrystesting.repo.Sql.RETRIEVE_DATA;
 
 @Repository
 public class IbfDataRepoImpl implements IbfDataRepo {
     @Autowired
     private JdbcTemplate jdbcTemplate;
-    private static InvertibleBloomFilter invertibleBloomFilter = new InvertibleBloomFilter(4, 100);
+
 
     @Override
-    public void streamIbfData() throws Exception {
+    public void streamIbfData(final InvertibleBloomFilter invertibleBloomFilter) throws Exception {
         try {
             jdbcTemplate.query(IBF_QUERY, resultSet -> {
 
@@ -58,9 +60,18 @@ public class IbfDataRepoImpl implements IbfDataRepo {
         );
     }
 
-    public InvertibleBloomFilter getInvertibleBloomFilter() {
-        return this.invertibleBloomFilter;
+    @Override
+    public List<DataTable> retrieveAllData(String rowHash) {
+        return jdbcTemplate.query(RETRIEVE_DATA, new Object[]{rowHash}, (rs, rowNum) ->
+                new DataTable(
+                        rs.getLong("ROW_HASH_NUMBER"),
+                        rs.getString("STRING_COLUMN"),
+                        rs.getLong("NUMBER_COLUMN"),
+                        rs.getDate("DATE_COLUMN"),
+                        rs.getString("CLOB_COLUMN")
+                ));
     }
+
 
 }
 
