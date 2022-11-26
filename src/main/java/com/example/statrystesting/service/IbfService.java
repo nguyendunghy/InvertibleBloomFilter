@@ -30,4 +30,8 @@ public class IbfService {
         return ibfDataRepo.retrieveAllData( rowHash);
     }
 
+    public List<DataTable> retrieveAllHistoryData(String rowHash){
+        return ibfDataRepo.retrieveAllHistoryData( rowHash);
+    }
+
 }

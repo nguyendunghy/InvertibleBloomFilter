@@ -61,6 +61,18 @@ public class IbfController {
                 .value(ibfDataList)
                 .build();
     }
+
+    @GetMapping(value = "/retrieve/history/{rowHash}", consumes = "application/json", produces = "application/json")
+    public CommonResponse retrieveHistory(@PathVariable("rowHash") String rowHash) {
+        List<DataTable> ibfDataList = ibfService.retrieveAllHistoryData(rowHash);
+
+        return CommonResponse.builder()
+                .code(Constant.SUCCESS_CODE)
+                .message(Constant.SUCCESS_MESS)
+                .value(ibfDataList)
+                .build();
+    }
+
     @GetMapping(value = "/findAll", consumes = "application/json", produces = "application/json")
     public CommonResponse findAll() {
         List<IbfData> ibfDataList = ibfService.findAll();

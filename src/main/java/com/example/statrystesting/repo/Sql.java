@@ -34,4 +34,21 @@ public class Sql {
             "                  from IBF_DATA)))\n" +
             "where ROW_HASH_NUMBER = ?";
 
+    public static final String RETRIEVE_DATA_HISTORY = "select *\n" +
+            "from (select TO_NUMBER(SUBSTR(ROWHASH, 1, 15), 'XXXXXXXXXXXXXXXX') as ROW_HASH_NUMBER,\n" +
+            "             STRING_COLUMN,\n" +
+            "             NUMBER_COLUMN,\n" +
+            "             DATE_COLUMN,\n" +
+            "             CLOB_COLUMN\n" +
+            "      from (select STANDARD_HASH(COALESCE(STRING_COLUMN, '') || COALESCE(TO_CHAR(NUMBER_COLUMN), '') ||\n" +
+            "                                 COALESCE(TO_CHAR(DATE_COLUMN), '') || COALESCE(TO_CHAR(CLOB_COLUMN), ''),\n" +
+            "                                 'MD5') as ROWHASH,\n" +
+            "                   STRING_COLUMN,\n" +
+            "                   NUMBER_COLUMN,\n" +
+            "                   DATE_COLUMN,\n" +
+            "                   CLOB_COLUMN\n" +
+            "            from (select distinct STRING_COLUMN, NUMBER_COLUMN, DATE_COLUMN, TO_CHAR(CLOB_COLUMN) AS CLOB_COLUMN\n" +
+            "                  from IBF_DATA_HISTORY)))\n" +
+            "where ROW_HASH_NUMBER = ?";
+
 }

@@ -10,8 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static com.example.statrystesting.repo.Sql.IBF_QUERY;
-import static com.example.statrystesting.repo.Sql.RETRIEVE_DATA;
+import static com.example.statrystesting.repo.Sql.*;
 
 @Repository
 public class IbfDataRepoImpl implements IbfDataRepo {
@@ -71,7 +70,17 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                         rs.getString("CLOB_COLUMN")
                 ));
     }
-
+    @Override
+    public List<DataTable> retrieveAllHistoryData(String rowHash) {
+        return jdbcTemplate.query(RETRIEVE_DATA_HISTORY, new Object[]{rowHash}, (rs, rowNum) ->
+                new DataTable(
+                        rs.getLong("ROW_HASH_NUMBER"),
+                        rs.getString("STRING_COLUMN"),
+                        rs.getLong("NUMBER_COLUMN"),
+                        rs.getDate("DATE_COLUMN"),
+                        rs.getString("CLOB_COLUMN")
+                ));
+    }
 
 }
 

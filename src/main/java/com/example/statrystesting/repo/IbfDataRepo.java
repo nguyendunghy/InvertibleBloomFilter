@@ -4,7 +4,6 @@ import com.example.statrystesting.entity.DataTable;
 import com.example.statrystesting.entity.IbfData;
 import com.example.statrystesting.ibf.InvertibleBloomFilter;
 
-import java.sql.Statement;
 import java.util.List;
 
 public interface IbfDataRepo {
@@ -14,4 +13,7 @@ public interface IbfDataRepo {
     List<IbfData> findAll();
 
     List<DataTable> retrieveAllData(String rowHash);
+
+    List<DataTable> retrieveAllHistoryData(String rowHash);
+
 }

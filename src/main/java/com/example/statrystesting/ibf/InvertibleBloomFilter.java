@@ -77,10 +77,10 @@ public class InvertibleBloomFilter {
     }
 
 
-    public void insert(IbfData row){
+    public void insert(IbfData row) {
         long rowHashNumber = row.getRowHashNumber();
-        long[] hashNumbers = {row.getStringHashNumber(), row.getNumberHashNumber(), row.getDateHashNumber(),row.getClobHashNumber() };
-        insert(hashNumbers,rowHashNumber);
+        long[] hashNumbers = {row.getStringHashNumber(), row.getNumberHashNumber(), row.getDateHashNumber(), row.getClobHashNumber()};
+        insert(hashNumbers, rowHashNumber);
     }
 
     /**
@@ -227,6 +227,7 @@ public class InvertibleBloomFilter {
             throw new IllegalArgumentException(
                     String.format("key length mismatch: %d != %d", keyLengthsSum, other.keyLengthsSum));
     }
+
     public InvertibleBloomFilter copy() {
         InvertibleBloomFilter _clone = new InvertibleBloomFilter(keyLengthsSum, divisors);
         for (int cellIndex = 0; cellIndex < cells.length; cellIndex++) {
@@ -256,6 +257,7 @@ public class InvertibleBloomFilter {
         }
         return sb.toString();
     }
+
     /**
      * NOTE: If you are going to modify this serializer, please make sure to add a way to migrate all the stored IBFs.
      * Otherwise, all the existing connectors that use Ibf will be broken.
@@ -263,7 +265,7 @@ public class InvertibleBloomFilter {
     public static class Serializer extends ByteBufSerializer<InvertibleBloomFilter> {
 
         //        @Override
-        public InvertibleBloomFilter decode( ByteBuf byteBuf) {
+        public InvertibleBloomFilter decode(ByteBuf byteBuf) {
             int keyLengthSum = ByteBufSerializer.int32.decode(byteBuf);
             long[] divisors = new long[K_INDEPENDENT_HASH_FUNCTIONS];
             for (int i = 0; i < K_INDEPENDENT_HASH_FUNCTIONS; i++) {
@@ -286,7 +288,7 @@ public class InvertibleBloomFilter {
         }
 
         @Override
-        public void encode(InvertibleBloomFilter ibf,  ByteBuf byteBuf) {
+        public void encode(InvertibleBloomFilter ibf, ByteBuf byteBuf) {
             ByteBufSerializer.int32.encode(ibf.keyLengthsSum, byteBuf);
             for (int i = 0; i < K_INDEPENDENT_HASH_FUNCTIONS; i++) {
                 ByteBufSerializer.long64.encode(ibf.divisors[i], byteBuf);
@@ -302,7 +304,7 @@ public class InvertibleBloomFilter {
         }
 
 
-//        @Override
+        //        @Override
         public String getName() {
             return "InvertibleBloomFilter";
         }
