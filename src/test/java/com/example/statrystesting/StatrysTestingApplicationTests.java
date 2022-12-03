@@ -1,5 +1,6 @@
 package com.example.statrystesting;
 
+import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -10,4 +11,9 @@ class StatrysTestingApplicationTests {
     void contextLoads() {
     }
 
+
+    @Test
+    void testUnitTest(){
+        Assert.assertNotNull(1L);
+    }
 }

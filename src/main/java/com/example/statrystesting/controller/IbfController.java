@@ -4,6 +4,7 @@ import com.example.statrystesting.entity.DataTable;
 import com.example.statrystesting.entity.IbfData;
 import com.example.statrystesting.entity.response.CommonResponse;
 import com.example.statrystesting.ibf.IBFDecodeResult;
+import com.example.statrystesting.ibf.IbfCheckpointManager;
 import com.example.statrystesting.ibf.InvertibleBloomFilter;
 import com.example.statrystesting.service.IbfService;
 import com.example.statrystesting.utils.Constant;
@@ -27,7 +28,7 @@ public class IbfController {
 
     @GetMapping(value = "/init", consumes = "application/json", produces = "application/json")
     public CommonResponse init() {
-       ibfService.streamIbfData(invertibleBloomFilter);
+        ibfService.streamIbfData(invertibleBloomFilter);
 
         return CommonResponse.builder()
                 .code(Constant.SUCCESS_CODE)
@@ -83,5 +84,25 @@ public class IbfController {
                 .value(ibfDataList)
                 .build();
     }
+
+
+    @GetMapping(value = "/testIbfCheckpointManager", consumes = "application/json", produces = "application/json")
+    public CommonResponse testIbfCheckpointManager() {
+        try {
+            IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(null,null,null);
+            ibfCheckpointManager.diff();
+
+            return CommonResponse.builder()
+                    .code(Constant.SUCCESS_CODE)
+                    .message(Constant.SUCCESS_MESS)
+                    .value(null)
+                    .build();
+        } catch (Exception ex) {
+            log.info("have error", ex);
+        }
+        return CommonResponse.builder().build();
+    }
+
+
 
 }
