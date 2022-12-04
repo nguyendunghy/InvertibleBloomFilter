@@ -13,7 +13,14 @@ import java.util.Map;
 
 public class VelocityUtils {
 
+    public static String generateIBFQuery(String templateFilename, String tableName, String[] columnNames, String outputFunction) {
+        HashMap<String,Object> hashMap = new HashMap<>();
+        hashMap.put("dataTableName",tableName);
+        hashMap.put("columnNames",columnNames);
+        hashMap.put("output", "#" + outputFunction + "()");
 
+        return VelocityUtils.generate(templateFilename, hashMap);
+    }
     public static String getInvertibleBloomFilterTemplate(String templateFilename, long[] divisors,
                                                            String macroName, Map<String, Object> templateParams) {
         HashMap<String,Object> hashMap = new HashMap<>();

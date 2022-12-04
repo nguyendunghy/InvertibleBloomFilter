@@ -24,14 +24,14 @@ SELECT "_ibf_cell_index",
         #aggregate("_ibf_column$i"),
     #end
     #aggregate("_ibf_row_hash"),
-COUNT ("_ibf_row_hash")
+       COUNT ("_ibf_row_hash")
 FROM (
-    #if($fastIbfQuery)
-        #queryWithoutCartesianJoin()
-    #else
-        #queryWithCartesianJoin()
-    #end
-) GROUP BY "_ibf_cell_index"
+         #if($fastIbfQuery)
+             #queryWithoutCartesianJoin()
+         #else
+             #queryWithCartesianJoin()
+         #end
+         ) GROUP BY "_ibf_cell_index"
 #end
 
 ######
@@ -215,30 +215,29 @@ STANDARD_HASH($input, 'MD5')
     #foreach($pIndex in [0..2])
     SELECT ABS(MOD("_ibf_row_hash", $primeDivisors[$pIndex])) + $partitionOffsets[$pIndex] as "_ibf_cell_index",
         #foreach($i in [0..$lastKeyIndex])
-        "_ibf_column$i",
+           "_ibf_column$i",
         #end
-    "_ibf_row_hash"
+           "_ibf_row_hash"
     FROM (SELECT #columns()
-    FROM $table)
+          FROM $table)
         #if($pIndex < 2)
-        UNION ALL
+    UNION ALL
         #end
     #end
 #end
 
 #macro(queryWithCartesianJoin)
-SELECT CASE "_ibf_hash_index"
-WHEN 0 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[0]))
-WHEN 1 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[1])) + $partitionOffsets[1]
-WHEN 2 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[2])) + $partitionOffsets[2]
-END as "_ibf_cell_index",
-    #foreach($i in [0..$lastKeyIndex])
-    "_ibf_column$i",
-    #end
-"_ibf_row_hash"
-FROM (SELECT "_ibf_hash_index",
-    #columns()
-FROM $table,
-(SELECT 0 as "_ibf_hash_index" from dual UNION ALL SELECT 1 from dual UNION ALL SELECT 2 from dual))
+    SELECT CASE "_ibf_hash_index"
+               WHEN 0 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[0]))
+               WHEN 1 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[1])) + $partitionOffsets[1]
+                           WHEN 2 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[2])) + $partitionOffsets[2]
+        END as "_ibf_cell_index",
+        #foreach($i in [0..$lastKeyIndex])
+            "_ibf_column$i",
+        #end
+        "_ibf_row_hash"
+    FROM (SELECT "_ibf_hash_index",
+        #columns()
+        FROM $table,
+        (SELECT 0 as "_ibf_hash_index" from dual UNION ALL SELECT 1 from dual UNION ALL SELECT 2 from dual))
 #end
-
