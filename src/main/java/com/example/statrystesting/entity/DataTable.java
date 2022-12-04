@@ -1,15 +1,14 @@
 package com.example.statrystesting.entity;
 
-import java.util.Date;
 
 public class DataTable {
     private long rowHashNumber;
     private String stringColumn;
     private Long numberColumn;
-    private Date dateColumn;
+    private String  dateColumn;
     private String clobColumn;
 
-    public DataTable(long rowHashNumber, String stringColumn, Long numberColumn, Date dateColumn, String clobColumn) {
+    public DataTable(long rowHashNumber, String stringColumn, Long numberColumn, String dateColumn, String clobColumn) {
         this.rowHashNumber = rowHashNumber;
         this.stringColumn = stringColumn;
         this.numberColumn = numberColumn;
@@ -44,11 +43,11 @@ public class DataTable {
         this.numberColumn = numberColumn;
     }
 
-    public Date getDateColumn() {
+    public String getDateColumn() {
         return dateColumn;
     }
 
-    public void setDateColumn(Date dateColumn) {
+    public void setDateColumn(String dateColumn) {
         this.dateColumn = dateColumn;
     }
 
