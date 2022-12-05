@@ -1,9 +1,9 @@
-package com.example.statrystesting.service;
+package com.example.invirtablebloomfilter.service;
 
 
-import com.example.statrystesting.entity.request.SaveUserRequest;
-import com.example.statrystesting.repo.UserRepo;
-import com.example.statrystesting.utils.Constant;
+import com.example.invirtablebloomfilter.entity.request.SaveUserRequest;
+import com.example.invirtablebloomfilter.repo.UserRepo;
+import com.example.invirtablebloomfilter.utils.Constant;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

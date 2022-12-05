@@ -1,4 +1,4 @@
-package com.example.statrystesting.entity;
+package com.example.invirtablebloomfilter.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -1,10 +1,10 @@
-package com.example.statrystesting;
+package com.example.invirtablebloomfilter;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class StatrysTestingApplicationTests {
+class InvertibleBloomFilterApplicationTests {
 
     @Test
     void contextLoads() {

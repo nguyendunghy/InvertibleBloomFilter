@@ -1,4 +1,4 @@
-package com.example.statrystesting.entity.request;
+package com.example.invirtablebloomfilter.entity.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

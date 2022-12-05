@@ -1,4 +1,4 @@
-package com.example.statrystesting.utils;
+package com.example.invirtablebloomfilter.utils;
 
 import java.util.HashMap;
 

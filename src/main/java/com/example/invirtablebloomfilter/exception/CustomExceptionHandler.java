@@ -1,7 +1,7 @@
-package com.example.statrystesting.exception;
+package com.example.invirtablebloomfilter.exception;
 
-import com.example.statrystesting.entity.response.CommonResponse;
-import com.example.statrystesting.utils.Constant;
+import com.example.invirtablebloomfilter.entity.response.CommonResponse;
+import com.example.invirtablebloomfilter.utils.Constant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
