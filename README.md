@@ -1,4 +1,4 @@
-# TeradataTesting
+# InvirtableBloomFilter
 
 - Note: Teradata does not support Mac M1
 # Install teradata, vmware on window 
