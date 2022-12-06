@@ -1,0 +1,47 @@
+#evaluate($output)
+#macro(numberizeHashTableData)
+SELECT TO_NUMBER(SUBSTR(ROWHASH, 1, 15), 'XXXXXXXXXXXXXXXX')    as ROW_HASH_NUMBER,
+    #set($columnSize = $columnNames.size() - 1)
+    #foreach($i in [0..$columnSize])
+        #if($i > 0)
+        ,
+        #end
+    TO_NUMBER(SUBSTR($columnNames[$i]_HASH, 1, 15), 'XXXXXXXXXXXXXXXX')    as $columnNames[$i]_HASH_NUMBER
+    #end
+FROM (#hashTableData())
+#end
+
+#macro(hashTableData)
+SELECT STANDARD_HASH(#concatRowData(),'MD5') as ROWHASH,
+    #set($columnSize = $columnNames.size() - 1)
+    #foreach($i in [0..$columnSize])
+        #if($i > 0)
+        ,
+        #end
+    STANDARD_HASH(COALESCE($columnNames[$i], ''), 'MD5') as $columnNames[$i]_HASH
+    #end
+FROM (#distinctData())
+#end
+
+#macro(concatRowData)
+    #set($columnSize = $columnNames.size() - 1)
+    #foreach($i in [0..$columnSize])
+      #if($i > 0)
+          ||
+      #end
+        COALESCE($columnNames[$i],'')
+    #end
+#end
+
+#macro(distinctData)
+SELECT DISTINCT
+    #set($columnSize = $columnNames.size() - 1)
+    #foreach($i in [0..$columnSize])
+      #if($i > 0)
+          ,
+      #end
+      TO_CHAR($columnNames[$i]) AS $columnNames[$i]
+    #end
+FROM $dataTableName
+#end
+
