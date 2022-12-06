@@ -16,7 +16,7 @@ FROM (#tempHashTableData())
 #end
 
 #macro(tempHashTableData)
-SELECT STANDARD_HASH(#concatRowData(),'MD5') as ROWHASH,
+SELECT DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW(#concatRowData())) as ROWHASH,
     #set($columnSize = $columnNames.size() - 1)
     #foreach($i in [0..$columnSize])
         #if($i > 0)
@@ -33,7 +33,7 @@ FROM (#distinctData())
         #if($i > 0)
         ||
         #end
-    COALESCE($columnNames[$i],'')
+    COALESCE($columnNames[$i],'-')
     #end
 #end
 

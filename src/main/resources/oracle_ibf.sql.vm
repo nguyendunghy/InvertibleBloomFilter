@@ -158,7 +158,7 @@ TO_NUMBER(SUBSTR(#md5($inner), 1, 15), 'XXXXXXXXXXXXXXX')
 #end
 
 #macro(md5 $input)
-STANDARD_HASH($input, 'MD5')
+DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW($input)
 #end
 
 ######
