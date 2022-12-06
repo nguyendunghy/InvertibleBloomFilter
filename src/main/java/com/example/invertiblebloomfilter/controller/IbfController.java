@@ -28,6 +28,7 @@ public class IbfController {
     @GetMapping(value = "/init", consumes = "application/json", produces = "application/json")
     public CommonResponse init() {
        ibfService.streamIbfData(invertibleBloomFilter);
+       ibfService.saveIbf(invertibleBloomFilter);
 
         return CommonResponse.builder()
                 .code(Constant.SUCCESS_CODE)

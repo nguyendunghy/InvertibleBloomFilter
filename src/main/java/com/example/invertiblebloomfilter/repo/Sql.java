@@ -51,4 +51,10 @@ public class Sql {
             "                  from IBF_DATA_HISTORY)))\n" +
             "where ROW_HASH_NUMBER = ?";
 
+
+    public static String SAVE_IBF_QUERY = "INSERT INTO IBF(ID, DIVISORS,KEY_LENGTH_SUM) VALUES (?, ?, ?)";
+    public static String RETRIEVE_IBF_QUERY = "SELECT ID, DIVISORS,KEY_LENGTH_SUM FROM IBF WHERE ID = ?";
+
+    public static String GET_MAX_IBF_ID_QUERY = "SELECT MAX(ID) FROM IBF";
+
 }

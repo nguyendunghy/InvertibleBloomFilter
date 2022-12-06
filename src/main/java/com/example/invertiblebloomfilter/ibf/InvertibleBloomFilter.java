@@ -209,6 +209,14 @@ public class InvertibleBloomFilter {
         return keyLengthsSum;
     }
 
+    public long[] getDivisors() {
+        return divisors;
+    }
+
+    public int getKeyLengthsSum() {
+        return keyLengthsSum;
+    }
+
     @Override
     public String toString() {
         return Arrays.toString(cells);
