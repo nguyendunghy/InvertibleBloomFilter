@@ -1,11 +1,11 @@
 package com.example.invertiblebloomfilter.repo;
 
-import com.example.invertiblebloomfilter.entity.Ibf;
+import com.example.invertiblebloomfilter.entity.IbfEntity;
 
 public interface IbfRepo {
-    void save(Ibf ibf);
+    void save(IbfEntity ibf);
 
-    Ibf get(Long id);
+    IbfEntity get(Long id);
 
     Long getMaxId();
 }

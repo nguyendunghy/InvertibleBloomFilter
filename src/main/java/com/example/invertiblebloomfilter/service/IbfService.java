@@ -1,7 +1,7 @@
 package com.example.invertiblebloomfilter.service;
 
 import com.example.invertiblebloomfilter.entity.DataTable;
-import com.example.invertiblebloomfilter.entity.Ibf;
+import com.example.invertiblebloomfilter.entity.IbfEntity;
 import com.example.invertiblebloomfilter.entity.IbfData;
 import com.example.invertiblebloomfilter.ibf.InvertibleBloomFilter;
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
@@ -37,7 +37,7 @@ public class IbfService {
             divisors = divisors + "-" + invertibleBloomFilter.getDivisors()[i];
         }
 
-        Ibf ibf = Ibf.builder()
+        IbfEntity ibf = IbfEntity.builder()
                 .id(maxId + 1)
                 .divisors(divisors)
                 .keyLengthSum((long) invertibleBloomFilter.getKeyLengthsSum())

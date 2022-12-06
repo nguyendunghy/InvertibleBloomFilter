@@ -7,7 +7,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Ibf {
+public class IbfEntity {
     private Long id;
     private String divisors;
     private Long keyLengthSum;
