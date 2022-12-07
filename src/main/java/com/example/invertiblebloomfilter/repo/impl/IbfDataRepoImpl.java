@@ -28,7 +28,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                     new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
                     "numberizeHashTableData"
             );
-            System.out.println("=====> IBF_QUERY <===== " + ibfQuery);
+            System.out.println("=====> IBF_QUERY:" + ibfQuery);
             jdbcTemplate.query(ibfQuery, resultSet -> {
 
                 while (resultSet.next()) {

@@ -14,25 +14,26 @@ import static com.example.invertiblebloomfilter.repo.Sql.*;
 public class IbfRepoImpl implements IbfRepo {
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
     @Override
     public void save(IbfEntity ibf) {
-        jdbcTemplate.update(SAVE_IBF_QUERY, ibf.getId(), ibf.getDivisors(),ibf.getKeyLengthSum());
+        jdbcTemplate.update(SAVE_IBF_QUERY, ibf.getId(), ibf.getDivisors(), ibf.getKeyLengthSum());
     }
 
     @Override
     public IbfEntity get(Long id) {
         List<IbfEntity> list = jdbcTemplate.query(
-                RETRIEVE_IBF_BY_ID_QUERY,
+                RETRIEVE_IBF_BY_ID_QUERY, new Object[]{id},
                 (rs, rowNum) ->
                         new IbfEntity(
                                 rs.getLong("ID"),
-                                rs.getString("STRING_HASH_NUMBER"),
+                                rs.getString("DIVISORS"),
                                 rs.getLong("KEY_LENGTH_SUM")
 
                         )
         );
 
-        if(list == null || list.isEmpty()){
+        if (list == null || list.isEmpty()) {
             return null;
         }
 
@@ -41,6 +42,7 @@ public class IbfRepoImpl implements IbfRepo {
 
     @Override
     public Long getMaxId() {
-        return jdbcTemplate.queryForObject(GET_MAX_IBF_ID_QUERY,Long.class);
+        Long temp = jdbcTemplate.queryForObject(GET_MAX_IBF_ID_QUERY, Long.class);
+        return temp == null ? 0L : temp;
     }
 }

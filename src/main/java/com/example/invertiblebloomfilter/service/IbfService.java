@@ -61,7 +61,7 @@ public class IbfService {
     @Transactional
     public void saveIbf(InvertibleBloomFilter invertibleBloomFilter) {
         Long maxId = ibfRepo.getMaxId();
-        Long newIbfId = maxId == null ? 1L : maxId + 1L;
+        Long newIbfId = maxId + 1L;
 
         saveIbfEntity(invertibleBloomFilter, newIbfId);
         saveCellEntities(invertibleBloomFilter, newIbfId);
@@ -80,7 +80,7 @@ public class IbfService {
 
 
     private void saveCellEntities(InvertibleBloomFilter ibf, Long ibfId) {
-        Long maxId = cellRepo.getMaxId();
+        Long maxId = cellRepo.getMaxId() ;
         int count = 0;
         for (Cell cell : ibf.getCells()) {
             CellEntity cellEntity = new CellEntity();
