@@ -20,15 +20,15 @@ import java.util.List;
 @RequestMapping("/ibf")
 @Slf4j
 public class IbfController {
-    private static InvertibleBloomFilter invertibleBloomFilter = new InvertibleBloomFilter(4, 7);
 
     @Autowired
     private IbfService ibfService;
 
     @GetMapping(value = "/init", consumes = "application/json", produces = "application/json")
     public CommonResponse init() {
-       ibfService.streamIbfData(invertibleBloomFilter);
-       ibfService.saveIbf(invertibleBloomFilter);
+        InvertibleBloomFilter invertibleBloomFilter = new InvertibleBloomFilter(4, 7);
+        ibfService.streamIbfData(invertibleBloomFilter);
+        ibfService.saveIbf(invertibleBloomFilter);
 
         return CommonResponse.builder()
                 .code(Constant.SUCCESS_CODE)
@@ -39,10 +39,12 @@ public class IbfController {
 
     @GetMapping(value = "/diff", consumes = "application/json", produces = "application/json")
     public CommonResponse diff() {
+        InvertibleBloomFilter oldIBF = ibfService.retrieveIbf();
+
         InvertibleBloomFilter newIBF = new InvertibleBloomFilter(4, 7);
         ibfService.streamIbfData(newIBF);
 
-        InvertibleBloomFilter diff = newIBF.subtract(invertibleBloomFilter);
+        InvertibleBloomFilter diff = newIBF.subtract(oldIBF);
         IBFDecodeResult result = diff.decode();
 
         return CommonResponse.builder()
