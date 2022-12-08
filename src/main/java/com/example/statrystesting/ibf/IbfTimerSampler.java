@@ -58,7 +58,9 @@ public enum IbfTimerSampler {
     }
 
     public void stop() {
-        if (sample != null) sample.stop();
+        if (sample != null) {
+            sample.stop();
+        }
         sample = null;
     }
 }

@@ -20,8 +20,7 @@ public interface IbfTableEncoder extends IbfTableInspector {
      * @return ResizableInvertibleBloomFilter
      * @throws SQLException
      */
-    ResizableInvertibleBloomFilter getResizableInvertibleBloomFilter(
-            int smallCellCount, ResizableInvertibleBloomFilter.Sizes size) throws SQLException;
+    ResizableInvertibleBloomFilter getResizableInvertibleBloomFilter(int smallCellCount, ResizableInvertibleBloomFilter.Sizes size) throws SQLException;
 
     /**
      * Fetch a ResizableInvertibleBloomFilter to replace the current persisted InvertibleBloomFilter
@@ -33,8 +32,7 @@ public interface IbfTableEncoder extends IbfTableInspector {
      * @return ResizableInvertibleBloomFilter
      * @throws SQLException
      */
-    ResizableInvertibleBloomFilter getReplacementResizableInvertibleBloomFilter(
-            int smallCellCount, ResizableInvertibleBloomFilter.Sizes size) throws SQLException;
+    ResizableInvertibleBloomFilter getReplacementResizableInvertibleBloomFilter(int smallCellCount, ResizableInvertibleBloomFilter.Sizes size) throws SQLException;
 
     /**
      * Fetch an InvertibleBloomFilter representing a database table from the database by running a query

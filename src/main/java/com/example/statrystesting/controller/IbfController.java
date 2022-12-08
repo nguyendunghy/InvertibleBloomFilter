@@ -4,7 +4,6 @@ import com.example.statrystesting.entity.DataTable;
 import com.example.statrystesting.entity.IbfData;
 import com.example.statrystesting.entity.response.CommonResponse;
 import com.example.statrystesting.ibf.IBFDecodeResult;
-import com.example.statrystesting.ibf.IbfCheckpointManager;
 import com.example.statrystesting.ibf.InvertibleBloomFilter;
 import com.example.statrystesting.service.IbfService;
 import com.example.statrystesting.utils.Constant;
@@ -89,8 +88,17 @@ public class IbfController {
     @GetMapping(value = "/testIbfCheckpointManager", consumes = "application/json", produces = "application/json")
     public CommonResponse testIbfCheckpointManager() {
         try {
-            IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(null,null,null);
-            ibfCheckpointManager.diff();
+//            File file = new File("IbfLocal.txt");
+//            Path path = file.toPath();
+//            System.out.println("Using local ibf storage location " + path);
+//            LocalDiskStorageAddressSpecification localDiskStorageAddressSpecification = new LocalDiskStorageAddressSpecification(path);
+//            LocalDiskIbfStorageClient localDiskIbfStorageClient = new LocalDiskIbfStorageClient(localDiskStorageAddressSpecification);
+//            SecretKey secretKey = Encrypt.newDataEncryptionKey();
+//            IbfPersistentStorage ibfPersistentStorage = new IbfPersistentStorage(localDiskIbfStorageClient, secretKey);
+//
+//
+//            IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(null, ibfPersistentStorage, null);
+//            ibfCheckpointManager.diff();
 
             return CommonResponse.builder()
                     .code(Constant.SUCCESS_CODE)
@@ -102,7 +110,6 @@ public class IbfController {
         }
         return CommonResponse.builder().build();
     }
-
 
 
 }

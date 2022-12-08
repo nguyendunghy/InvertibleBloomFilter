@@ -22,8 +22,7 @@ public class IbfSyncData {
     }
 
     public static class Serializer extends ByteBufSerializer<IbfSyncData> {
-        ByteBufSerializer<ResizableInvertibleBloomFilter> ibfSerializer =
-                new ResizableInvertibleBloomFilter.Serializer();
+        ByteBufSerializer<ResizableInvertibleBloomFilter> ibfSerializer = new ResizableInvertibleBloomFilter.Serializer();
 
         @Override
         public IbfSyncData decode(ByteBuf byteBuf) {

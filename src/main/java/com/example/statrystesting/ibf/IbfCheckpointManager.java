@@ -97,19 +97,25 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
      * @throws SQLException
      */
     public IbfSyncResult diff() throws IOException, SQLException {
+       //Step 0: ????
         if (adapter.ifReplacementRequired()) {
             diffManager.setReplacementIBF(fetchStartingSizedIBFWithColumnDefaults());
         }
 
+        // Step 1: Retrieve saved IBF
         ResizableInvertibleBloomFilter persistedIBF = downloadPersistedIBF();
         int smallCellCount = persistedIBF.smallCellCount;
         diffManager.setPreviousIBF(persistedIBF);
 
         currentSize = determineIBFSize(smallCellCount);
 
+        //Step 2: Try 2 times
         for (int retry = 0; retry < 2; retry++) {
+            //Set current IBF
             diffManager.setLatestIBF(fetchSizedIBF(smallCellCount));
 
+
+            //Get the diff and ResultCode
             runWithDurationReport(
                     IbfTimerSampler.IBF_IBF_DECODE,
                     () -> {
@@ -117,6 +123,7 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
                         diffManager.compare();
                     });
 
+            //In case Decode success
             if (diffManager.compareSucceeded()) {
 //                IbfMetricsLogging.reportIBFSizePerTable(
 //                        diffManager.latestIBFDataSize(),
@@ -140,6 +147,7 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
             }
         }
 
+
         // Log metadata for debugging when the compare did not succeed
         if (!diffManager.compareSucceeded()) {
             DecodedIBFDebugger decodedIBFDebugger = new DecodedIBFDebugger(diffManager.diffIBF);
@@ -149,17 +157,18 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
 //                            decodedIBFDebugger.determineDecodeFailureReason(), decodedIBFDebugger.toString()));
         }
 
-        IbfSyncResult ibfSyncResult;
-        if (adapter.hasCompoundPkSupport())
-            ibfSyncResult =
-                    new IbfSyncResult(
-                            diffManager.getResult(),
-                            ((IbfTableEncoderWithCompoundPK) adapter).keyTypes(),
-                            ((IbfTableEncoderWithCompoundPK) adapter).keyLengths());
-        else
-            ibfSyncResult =
-                    new IbfSyncResult(diffManager.getResult(), adapter.keyType(), adapter.keyLength());
 
+
+
+        IbfSyncResult ibfSyncResult;
+        if (adapter.hasCompoundPkSupport()) {
+            ibfSyncResult = new IbfSyncResult(
+                    diffManager.getResult(),
+                    ((IbfTableEncoderWithCompoundPK) adapter).keyTypes(),
+                    ((IbfTableEncoderWithCompoundPK) adapter).keyLengths());
+        }else {
+            ibfSyncResult = new IbfSyncResult(diffManager.getResult(), adapter.keyType(), adapter.keyLength());
+        }
         this.lastRecordCount = ibfSyncResult.upserts().size() + ibfSyncResult.deletes().size();
         return ibfSyncResult;
     }
@@ -272,9 +281,7 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
     @VisibleForTesting
     ResizableInvertibleBloomFilter downloadPersistedIBF() throws IOException {
         try {
-            IbfSyncData syncData =
-                    (IbfSyncData)
-                            runWithDurationReport(
+            IbfSyncData syncData = (IbfSyncData) runWithDurationReport(
                                     IbfTimerSampler.IBF_IBF_DOWNLOAD,
                                     () -> {
                                         ByteBuf received = storage.get(objectID);
