@@ -97,7 +97,7 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
      * @throws SQLException
      */
     public IbfSyncResult diff() throws IOException, SQLException {
-       //Step 0: ????
+        //Step 0: ????
         if (adapter.ifReplacementRequired()) {
             diffManager.setReplacementIBF(fetchStartingSizedIBFWithColumnDefaults());
         }
@@ -158,15 +158,13 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
         }
 
 
-
-
         IbfSyncResult ibfSyncResult;
         if (adapter.hasCompoundPkSupport()) {
             ibfSyncResult = new IbfSyncResult(
                     diffManager.getResult(),
                     ((IbfTableEncoderWithCompoundPK) adapter).keyTypes(),
                     ((IbfTableEncoderWithCompoundPK) adapter).keyLengths());
-        }else {
+        } else {
             ibfSyncResult = new IbfSyncResult(diffManager.getResult(), adapter.keyType(), adapter.keyLength());
         }
         this.lastRecordCount = ibfSyncResult.upserts().size() + ibfSyncResult.deletes().size();
@@ -245,7 +243,9 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
                             .mapToInt(Integer::intValue)
                             .sum();
             emptyIBF = new ResizableInvertibleBloomFilter(keyLengthsSum, smallCellCount(), startingSize);
-        } else emptyIBF = new ResizableInvertibleBloomFilter(adapter.keyLength(), smallCellCount(), startingSize);
+        } else {
+            emptyIBF = new ResizableInvertibleBloomFilter(adapter.keyLength(), smallCellCount(), startingSize);
+        }
 
         persistIbfSyncData(new IbfSyncData(emptyIBF, 0));
     }
@@ -282,11 +282,11 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
     ResizableInvertibleBloomFilter downloadPersistedIBF() throws IOException {
         try {
             IbfSyncData syncData = (IbfSyncData) runWithDurationReport(
-                                    IbfTimerSampler.IBF_IBF_DOWNLOAD,
-                                    () -> {
-                                        ByteBuf received = storage.get(objectID);
-                                        return syncDataSerializer.decode(received);
-                                    });
+                    IbfTimerSampler.IBF_IBF_DOWNLOAD,
+                    () -> {
+                        ByteBuf received = storage.get(objectID);
+                        return syncDataSerializer.decode(received);
+                    });
             this.lastRecordCount = syncData.lastRecordCount;
             return syncData.persistedIBF;
         } catch (IOException e) {

@@ -79,7 +79,7 @@ public class OracleTableInfo {
     }
 
     public OptionalLong getTableRowCount() {
-        return tableMetricsProvider.getTableRowCount(tableRef);
+        return tableMetricsProvider  == null ? OptionalLong.empty(): tableMetricsProvider.getTableRowCount(tableRef);
     }
 
     public int getPageLimit() {

@@ -29,9 +29,12 @@ public class IbfCheckpointManagerTest {
 
             IbfPersistentStorage ibfPersistentStorage = buildIbfPersistentStorage();
 
-            String objectId = UUID.randomUUID().toString();
+            String objectId = "165c56bd-d573-4bc2-9cc9-e36d3ed82fd5";
 
             IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(oracleIbfAdapter, ibfPersistentStorage, objectId);
+
+            ibfCheckpointManager.simulateResetWithEmptyIBF();
+
             IbfSyncResult ibfSyncResult = ibfCheckpointManager.diff();
 
 
@@ -70,15 +73,15 @@ public class IbfCheckpointManagerTest {
 
     private List<OracleColumnInfo> buildColumns(TableRef tableRef) {
 
-        Column stringColumn = new Column("STRING_COLUMN", DataType.String, false);
-        Column numberColumn = new Column("NUMBER_COLUMN", DataType.Long, false);
-        Column dateColumn = new Column("DATE_COLUMN", DataType.LocalDate, false);
-        Column clobColumn = new Column("CLOB_COLUMN", DataType.String, false);
+        Column stringColumn = new Column("STRING_COLUMN", DataType.String, true);
+        Column numberColumn = new Column("NUMBER_COLUMN", DataType.Long, true);
+        Column dateColumn = new Column("DATE_COLUMN", DataType.LocalDate, true);
+        Column clobColumn = new Column("CLOB_COLUMN", DataType.String, true);
 
-        OracleColumn oracleStringColumn = new OracleColumn("STRING_COLUMN", OracleType.create("VARCHAR"), false, tableRef, Optional.empty());
-        OracleColumn oracleNumberColumn = new OracleColumn("NUMBER_COLUMN", OracleType.create("NUMBER"), false, tableRef, Optional.empty());
-        OracleColumn oracleDateColumn = new OracleColumn("DATE_COLUMN", OracleType.create("DATE"), false, tableRef, Optional.empty());
-        OracleColumn oracleClobColumn = new OracleColumn("CLOB_COLUMN", OracleType.create("CLOB"), false, tableRef, Optional.empty());
+        OracleColumn oracleStringColumn = new OracleColumn("STRING_COLUMN", OracleType.create("VARCHAR"), true, tableRef, Optional.empty());
+        OracleColumn oracleNumberColumn = new OracleColumn("NUMBER_COLUMN", OracleType.create("NUMBER"), true, tableRef, Optional.empty());
+        OracleColumn oracleDateColumn = new OracleColumn("DATE_COLUMN", OracleType.create("DATE"), true, tableRef, Optional.empty());
+        OracleColumn oracleClobColumn = new OracleColumn("CLOB_COLUMN", OracleType.create("CLOB",true), true, tableRef, Optional.empty());
 
         OracleColumnInfo stringOracleColumnInfo = new OracleColumnInfo(oracleStringColumn, stringColumn);
         OracleColumnInfo numberOracleColumnInfo = new OracleColumnInfo(oracleNumberColumn, numberColumn);
@@ -90,7 +93,7 @@ public class IbfCheckpointManagerTest {
     }
 
     private IbfPersistentStorage buildIbfPersistentStorage() {
-        File file = new File("IbfLocal.txt");
+        File file = new File("IbfLocal");
         Path path = file.toPath();
         System.out.println("Using local ibf storage location " + path);
         LocalDiskStorageAddressSpecification localDiskStorageAddressSpecification = new LocalDiskStorageAddressSpecification(path);
