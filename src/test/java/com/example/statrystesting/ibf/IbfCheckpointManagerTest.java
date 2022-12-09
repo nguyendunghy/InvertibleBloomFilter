@@ -3,13 +3,16 @@ package com.example.statrystesting.ibf;
 import oracle.jdbc.pool.OracleDataSource;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Value;
 
 import javax.crypto.SecretKey;
 import javax.sql.DataSource;
 import java.io.File;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class IbfCheckpointManagerTest {
@@ -17,6 +20,7 @@ public class IbfCheckpointManagerTest {
     private String url = "jdbc:oracle:thin:@localhost:49161:XE";
     private String username = "john";
     private String password = "abcd1234";
+    private final Duration CHECKPOINT_PERIOD = Duration.ofMinutes(15);
 
     @Test
     void testDiff() {
@@ -47,9 +51,42 @@ public class IbfCheckpointManagerTest {
     private OracleIbfAdapter buildOracleIbfAdapter() {
         DataSource dataSource = createDataSource(url, username, password);
 
+        TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
+        StandardConfig standardConfig = StandardConfig.createModifiable("JOHN", Arrays.asList("IBF_DATA"));
+        List<OracleColumnInfo> columns = buildColumns(tableRef);
+        OracleTableInfo oracleTableInfo = new OracleTableInfo(
+                tableRef,
+                standardConfig,
+                columns,
+                null
+        );
+        OracleIbfTableInfo oracleIbfTableInfo = new OracleIbfTableInfo(oracleTableInfo);
+        OracleIBFQueryBuilder oracleIBFQueryBuilder = new OracleIBFQueryBuilder(oracleIbfTableInfo);
+        PeriodicCheckpointer periodicCheckpointer = new PeriodicCheckpointer(new Output<String>(), "state", CHECKPOINT_PERIOD);
 
-        OracleIbfAdapter oracleIbfAdapter = new OracleIbfAdapter(dataSource, null, null, null, null);
+        OracleIbfAdapter oracleIbfAdapter = new OracleIbfAdapter(dataSource, oracleTableInfo, oracleIbfTableInfo, oracleIBFQueryBuilder, periodicCheckpointer);
         return oracleIbfAdapter;
+    }
+
+    private List<OracleColumnInfo> buildColumns(TableRef tableRef) {
+
+        Column stringColumn = new Column("STRING_COLUMN", DataType.String, false);
+        Column numberColumn = new Column("NUMBER_COLUMN", DataType.Long, false);
+        Column dateColumn = new Column("DATE_COLUMN", DataType.LocalDate, false);
+        Column clobColumn = new Column("CLOB_COLUMN", DataType.String, false);
+
+        OracleColumn oracleStringColumn = new OracleColumn("STRING_COLUMN", OracleType.create("VARCHAR"), false, tableRef, Optional.empty());
+        OracleColumn oracleNumberColumn = new OracleColumn("NUMBER_COLUMN", OracleType.create("NUMBER"), false, tableRef, Optional.empty());
+        OracleColumn oracleDateColumn = new OracleColumn("DATE_COLUMN", OracleType.create("DATE"), false, tableRef, Optional.empty());
+        OracleColumn oracleClobColumn = new OracleColumn("CLOB_COLUMN", OracleType.create("CLOB"), false, tableRef, Optional.empty());
+
+        OracleColumnInfo stringOracleColumnInfo = new OracleColumnInfo(oracleStringColumn, stringColumn);
+        OracleColumnInfo numberOracleColumnInfo = new OracleColumnInfo(oracleNumberColumn, numberColumn);
+        OracleColumnInfo dateOracleColumnInfo = new OracleColumnInfo(oracleDateColumn, dateColumn);
+        OracleColumnInfo clobOracleColumnInfo = new OracleColumnInfo(oracleClobColumn, clobColumn);
+
+        return Arrays.asList(stringOracleColumnInfo, numberOracleColumnInfo, dateOracleColumnInfo, clobOracleColumnInfo);
+
     }
 
     private IbfPersistentStorage buildIbfPersistentStorage() {
