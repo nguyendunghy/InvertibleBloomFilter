@@ -16,9 +16,9 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
 
     private static final IbfRetrier RETRIER = new IbfRetrier(Arrays.asList(IOException.class));
     private static final int MAX_RETRIES = 4;
-    private static final int DEFAULT_SMALL_CELL_COUNT = 5_000; // results in a ~8MB ResizableIBF
+    private static final int DEFAULT_SMALL_CELL_COUNT = 5_00; // results in a ~8MB ResizableIBF
     @VisibleForTesting
-    static final int MINIMUM_SMALL_CELL_COUNT = 3_200;
+    static final int MINIMUM_SMALL_CELL_COUNT = 3_20;
 
     //    @VisibleForTesting final int maxSmallCellCount;
     private static final double ALPHA = 1.5; // space overhead (IBF cells/number of differences)
@@ -44,7 +44,7 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
     boolean updatePerformedReplacement = false;
 
     public IbfCheckpointManager(Adapter adapter, IbfPersistentStorage storage, String objectID) {
-        this(adapter, storage, objectID, ResizableInvertibleBloomFilter.Sizes.XLARGE);
+        this(adapter, storage, objectID, ResizableInvertibleBloomFilter.Sizes.MEDIUM);
     }
 
     /**
@@ -251,7 +251,9 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
     }
 
     private void persistIbfSyncData(IbfSyncData syncData) {
-        if (debug) return;
+        if (debug) {
+            return;
+        }
         ByteBuf serializedBuf = Unpooled.buffer(syncData.dataSize());
         syncDataSerializer.encode(syncData, serializedBuf);
         try {
