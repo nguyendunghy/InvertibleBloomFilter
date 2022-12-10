@@ -1,0 +1,19 @@
+package com.example.invertiblebloomfilter.repo;
+
+import com.example.invertiblebloomfilter.entity.DataTable;
+import com.example.invertiblebloomfilter.entity.IbfData;
+import com.example.invertiblebloomfilter.ibf.InvertibleBloomFilter;
+
+import java.util.List;
+
+public interface IbfDataRepo {
+
+    void streamIbfData(InvertibleBloomFilter invertibleBloomFilter) throws Exception;
+
+    List<IbfData> findAll();
+
+    List<DataTable> retrieveAllData(String rowHash);
+
+    List<DataTable> retrieveAllHistoryData(String rowHash);
+
+}
