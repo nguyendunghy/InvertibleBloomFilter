@@ -1,5 +1,6 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.example.invertiblebloomfilter.entity.DataTable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 
@@ -163,16 +164,16 @@ public class OracleIbfTableSyncer extends OracleTableSyncer implements IbfTableW
         int pageLimit = tableInfo.getPageLimit();
         int totalUpsertSize = result.upserts().size();
         int upsertCount = 0;
-        Iterator<List<Object>> allUpsertKeys = result.upserts().iterator();
+        Iterator<List<DataTable>> allUpsertKeys = result.upserts().iterator();
 
         while (upsertCount < totalUpsertSize) {
-            List<List<Object>> upsertKeysSubSet = ImmutableList.copyOf(Iterators.limit(allUpsertKeys, pageLimit));
+            List<List<DataTable>> upsertKeysSubSet = ImmutableList.copyOf(Iterators.limit(allUpsertKeys, pageLimit));
             importPageOfUpserts(upsertKeysSubSet);
             upsertCount += upsertKeysSubSet.size();
         }
     }
 
-    private void importPageOfUpserts(List<List<Object>> upsertKeyValues) throws SQLException {
+    private void importPageOfUpserts(List<List<DataTable>> upsertKeyValues) throws SQLException {
         //dataSourceRetrier.runWithConnection(connection -> selectRowsAndImport(connection, upsertKeyValues));
 
         checkpoint();
@@ -191,7 +192,7 @@ public class OracleIbfTableSyncer extends OracleTableSyncer implements IbfTableW
     private void processDeletes(IbfSyncResult result) {
         List<OracleColumnInfo> sortedKeyColumns = tableInfo.getPrimaryKeys();
 
-        for (List<Object> keys : result.deletes()) {
+        for (List<DataTable> keys : result.deletes()) {
             if (keys.size() != sortedKeyColumns.size()) {
                 throw new IllegalArgumentException(
                         "Number of actual keys ("

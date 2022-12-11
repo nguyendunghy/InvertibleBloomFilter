@@ -6,9 +6,11 @@ import com.example.invertiblebloomfilter.ibf.InvertibleBloomFilter;
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
 import com.example.invertiblebloomfilter.velocity.VelocityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jdbc.JdbcProperties;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import javax.sql.DataSource;
 import java.util.List;
 
 import static com.example.invertiblebloomfilter.repo.Sql.*;
@@ -31,7 +33,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                     new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
                     "numberizeHashTableData"
             );
-            System.out.println("=====> IBF_QUERY <===== " + ibfQuery);
+//            System.out.println("=====> IBF_QUERY <===== " + ibfQuery);
             jdbcTemplate.query(ibfQuery, resultSet -> {
 
                 while (resultSet.next()) {
@@ -78,7 +80,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 new String[]{"STRING_COLUMN","NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
                 "selectChangedData"
         );
-        System.out.println(retrieveDataQuery);
+//        System.out.println(retrieveDataQuery);
         return jdbcTemplate.query(retrieveDataQuery, new Object[]{rowHash}, (rs, rowNum) ->
                 new DataTable(
                         rs.getLong("ROW_HASH_NUMBER"),
@@ -97,7 +99,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 new String[]{"STRING_COLUMN","NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
                 "selectChangedData"
         );
-        System.out.println(retrieveHistoryDataQuery);
+//        System.out.println(retrieveHistoryDataQuery);
 
         return jdbcTemplate.query(retrieveHistoryDataQuery, new Object[]{rowHash}, (rs, rowNum) ->
                 new DataTable(

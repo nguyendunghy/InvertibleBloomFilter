@@ -2,6 +2,7 @@ package com.example.invertiblebloomfilter.ibf;
 
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
 import com.example.invertiblebloomfilter.repo.impl.IbfDataRepoImpl;
+import com.example.invertiblebloomfilter.utils.JdbcTemplateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.JdbcProperties;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -166,7 +167,7 @@ public class OracleIbfAdapter implements IbfTableEncoderWithCompoundPK {
 
     private ResizableInvertibleBloomFilter getIbfFromDb(ResizableInvertibleBloomFilter ibf, String query) throws SQLException {
         try {
-            JdbcTemplate jdbcTemplate =  jdbcTemplate(dataSource,new JdbcProperties());
+            JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(dataSource,new JdbcProperties());
              IbfDataRepo ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
             ibfDataRepo.streamIbfData(ibf);
 
@@ -179,17 +180,7 @@ public class OracleIbfAdapter implements IbfTableEncoderWithCompoundPK {
         return ibf;
     }
 
-    JdbcTemplate jdbcTemplate(DataSource dataSource, JdbcProperties properties) {
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-        JdbcProperties.Template template = properties.getTemplate();
-        jdbcTemplate.setFetchSize(template.getFetchSize());
-        jdbcTemplate.setMaxRows(template.getMaxRows());
-        if (template.getQueryTimeout() != null) {
-            jdbcTemplate.setQueryTimeout((int)template.getQueryTimeout().getSeconds());
-        }
 
-        return jdbcTemplate;
-    }
 
     protected void executeIbfQueryAndLoad(InvertibleBloomFilter ibf, String query) throws SQLException {
         IbfTimerSampler.IBF_IBF_QUERY.start(tableRef());

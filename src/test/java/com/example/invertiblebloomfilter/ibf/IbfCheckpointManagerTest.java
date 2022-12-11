@@ -1,6 +1,5 @@
 package com.example.invertiblebloomfilter.ibf;
 
-import oracle.jdbc.pool.OracleDataSource;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
@@ -8,11 +7,12 @@ import javax.crypto.SecretKey;
 import javax.sql.DataSource;
 import java.io.File;
 import java.nio.file.Path;
-import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+
+import static com.example.invertiblebloomfilter.utils.DataSourceUtils.createDataSource;
 
 public class IbfCheckpointManagerTest {
 
@@ -103,17 +103,5 @@ public class IbfCheckpointManagerTest {
 
     }
 
-    private DataSource createDataSource(String url, String user, String password) {
-        try {
-            OracleDataSource dataSource = new OracleDataSource();
-            dataSource.setURL(url);
-            dataSource.setUser(user);
-            dataSource.setPassword(password);
-            return dataSource;
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
 
-        return null;
-    }
 }

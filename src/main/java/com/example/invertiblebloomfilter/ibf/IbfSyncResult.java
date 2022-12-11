@@ -1,8 +1,15 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.example.invertiblebloomfilter.entity.DataTable;
+import com.example.invertiblebloomfilter.repo.impl.IbfDataRepoImpl;
+import com.example.invertiblebloomfilter.utils.DataSourceUtils;
+import com.example.invertiblebloomfilter.utils.JdbcTemplateUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import org.springframework.boot.autoconfigure.jdbc.JdbcProperties;
+import org.springframework.jdbc.core.JdbcTemplate;
 
+import javax.sql.DataSource;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -12,7 +19,8 @@ public class IbfSyncResult {
 
     private final List<DataType> primaryKeyTypes;
     private final List<Integer> keyLengths;
-    @VisibleForTesting public final IBFDecodeResult ibfDecodeResult;
+    @VisibleForTesting
+    public final IBFDecodeResult ibfDecodeResult;
 
     @VisibleForTesting
     public IbfSyncResult(List<DataType> primaryKeyTypes, List<Integer> keyLengths) {
@@ -32,27 +40,45 @@ public class IbfSyncResult {
         this.keyLengths = keyLengths;
     }
 
-    /** @return List<List<Object>> containing the sorted list of primary keys of rows that were inserted or updated */
-    public List<List<Object>> upserts() {
+    /**
+     * @return List<List < Object>> containing the sorted list of primary keys of rows that were inserted or updated
+     */
+    public List<List<DataTable>> upserts() {
         return ibfDecodeResult
                 .aWithoutB
                 .stream()
-                .map(element -> IbfDbUtils.decodePk(primaryKeyTypes, keyLengths, element.keySum))
+                .map(element -> retrieveRecord(element.rowHashSum + ""))
+//                .map(element -> IbfDbUtils.decodePk(primaryKeyTypes, keyLengths, element.keySum))
                 // sorting the primary keys causes rows from the same page in the database to be fetched together
                 .sorted(new ListComparator<>())
                 .collect(Collectors.toList());
     }
 
-    /** @return Set<List<Object></Object>> containing the primary keys of rows that were deleted */
-    public Set<List<Object>> deletes() {
-        Set<List<Object>> bKeys =
+    /**
+     * @return Set<List < Object></Object>> containing the primary keys of rows that were deleted
+     */
+    public Set<List<DataTable>> deletes() {
+        Set<List<DataTable>> bKeys =
                 ibfDecodeResult
                         .bWithoutA
                         .stream()
-                        .map(element -> IbfDbUtils.decodePk(primaryKeyTypes, keyLengths, element.keySum))
+                        .map(element -> retrieveRecord(element.rowHashSum + ""))
+//                        .map(element -> IbfDbUtils.decodePk(primaryKeyTypes, keyLengths, element.keySum))
                         .collect(Collectors.toSet());
         upserts().forEach(bKeys::remove);
         return bKeys;
+    }
+
+    public List<DataTable> retrieveRecord(String rowHash) {
+        String url = "jdbc:oracle:thin:@localhost:49161:XE";
+        String username = "john";
+        String password = "abcd1234";
+        DataSource dataSource = DataSourceUtils.createDataSource(url, username, password);
+        JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(dataSource, new JdbcProperties());
+
+        IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
+        return ibfDataRepo.retrieveAllData(rowHash);
+
     }
 
     public boolean getSucceeded() {
