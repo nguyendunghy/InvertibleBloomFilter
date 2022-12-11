@@ -40,6 +40,7 @@ public class IbfCheckpointManagerTest {
             System.out.println("UPSERT :" + ibfSyncResult.upserts());
             System.out.println("DELETE :" + ibfSyncResult.deletes());
 
+            ibfCheckpointManager.update();
 
             Assert.assertTrue(true);
         } catch (Exception ex) {
