@@ -24,6 +24,38 @@ public class InvertibleBloomFilter {
 
     boolean decoded = false;
 
+    public InvertibleBloomFilter() {
+    }
+
+    public void setCells(Cell[] cells) {
+        this.cells = cells;
+    }
+
+
+    public long[] getDivisors() {
+        return divisors;
+    }
+
+    public void setDivisors(long[] divisors) {
+        this.divisors = divisors;
+    }
+
+    public int getKeyLengthsSum() {
+        return keyLengthsSum;
+    }
+
+    public void setKeyLengthsSum(int keyLengthsSum) {
+        this.keyLengthsSum = keyLengthsSum;
+    }
+
+    public boolean isDecoded() {
+        return decoded;
+    }
+
+    public void setDecoded(boolean decoded) {
+        this.decoded = decoded;
+    }
+
     /**
      * Construct a new Invertible Bloom Filter
      *

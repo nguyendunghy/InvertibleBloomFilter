@@ -1,5 +1,6 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.netty.buffer.ByteBuf;
 
 import java.util.Arrays;
@@ -24,6 +25,9 @@ public class Cell {
         this.count = count;
     }
 
+    public Cell() {
+    }
+
     /**
      * Replace all values in the cell with the values provided as arguments
      *
@@ -41,6 +45,7 @@ public class Cell {
      * @return returns true when all values in the cell is empty, meaning all values are 0 and the cell contains no
      * inserted or removed elements.
      */
+    @JsonIgnore
     public boolean isZero() {
         for (long key : keySums) {
             if (key != 0) {
@@ -53,6 +58,7 @@ public class Cell {
     /**
      * @return returns true when the cell has a count of 1 or -1, indicate that it *may* represent a single element
      */
+    @JsonIgnore
     public boolean isSingular() {
         return count == 1L || count == -1;
     }
@@ -114,6 +120,26 @@ public class Cell {
 
     public long[] keySums() {
         return keySums;
+    }
+
+    public long getRowHashSum() {
+        return rowHashSum;
+    }
+
+    public void setRowHashSum(long rowHashSum) {
+        this.rowHashSum = rowHashSum;
+    }
+
+    public long[] getKeySums() {
+        return keySums;
+    }
+
+    public void setKeySums(long[] keySums) {
+        this.keySums = keySums;
+    }
+
+    public void setCount(long count) {
+        this.count = count;
     }
 
     public long getCount() {

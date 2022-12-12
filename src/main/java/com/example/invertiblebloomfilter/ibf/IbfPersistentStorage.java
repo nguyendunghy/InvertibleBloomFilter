@@ -1,6 +1,7 @@
 package com.example.invertiblebloomfilter.ibf;
 
 
+import io.micrometer.core.instrument.util.IOUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
@@ -13,6 +14,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.UUID;
 
@@ -42,6 +44,10 @@ public class IbfPersistentStorage {
         storageClient.put(objectId, encrypt(body));
     }
 
+    public void put(String objectId, String body) throws IOException {
+        storageClient.put(objectId, body.getBytes(StandardCharsets.UTF_8));
+    }
+
     /**
      * Retrieve an object, identified by objectId, from storage. Its contents are decrypted after downloading.
      *
@@ -52,6 +58,15 @@ public class IbfPersistentStorage {
         InputStream in = storageClient.get(objectId);
         if (in == null) throw new DataNotFoundException("Cannot find data with objectId: " + objectId);
         return decrypt(in);
+    }
+
+
+    public String retrieve(String objectId) throws IOException {
+        InputStream in = storageClient.get(objectId);
+        if (in == null) {
+            throw new DataNotFoundException("Cannot find data with objectId: " + objectId);
+        }
+        return IOUtils.toString(in, StandardCharsets.UTF_8);
     }
 
     public static String generateRandomObjectId() {

@@ -32,10 +32,11 @@ public class IbfCheckpointManagerTest {
 
             IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(oracleIbfAdapter, ibfPersistentStorage, objectId);
 
-            ibfCheckpointManager.simulateResetWithEmptyIBF();
+//            ibfCheckpointManager.simulateResetWithEmptyIBF();
 
             IbfSyncResult ibfSyncResult = ibfCheckpointManager.diff();
 
+           ibfCheckpointManager.update();
 
             System.out.println("UPSERT :" + ibfSyncResult.upserts());
             System.out.println("DELETE :" + ibfSyncResult.deletes());

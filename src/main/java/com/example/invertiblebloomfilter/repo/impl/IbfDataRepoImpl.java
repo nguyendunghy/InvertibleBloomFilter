@@ -36,7 +36,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
 //            System.out.println("=====> IBF_QUERY <===== " + ibfQuery);
             jdbcTemplate.query(ibfQuery, resultSet -> {
 
-                while (resultSet.next()) {
+                do {
                     IbfData row = new IbfData(
                             resultSet.getLong("ROW_HASH_NUMBER"),
                             resultSet.getLong("STRING_COLUMN_HASH_NUMBER"),
@@ -46,7 +46,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
 
                     );
                     invertibleBloomFilter.insert(row);
-                }
+                }while (resultSet.next());
 
                 System.out.println(invertibleBloomFilter);
             });

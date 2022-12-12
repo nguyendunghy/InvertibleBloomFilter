@@ -192,11 +192,11 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
         if (!diffManager.compareSucceeded())
             throw new IllegalStateException("cannot update unless diff returned a successful result");
 
-        if (adapter.ifReplacementRequired()) {
-            persistIbfSyncData(new IbfSyncData(diffManager.getReplacementIBF(), lastRecordCount));
-            updatePerformedReplacement = true;
-            return;
-        }
+//        if (adapter.ifReplacementRequired()) {
+//            persistIbfSyncData(new IbfSyncData(diffManager.getReplacementIBF(), lastRecordCount));
+//            updatePerformedReplacement = true;
+//            return;
+//        }
 
 //        IbfMetricsLogging.reportIBFSizePerTable(
 //                diffManager.previousIBFDataSize(),
@@ -205,7 +205,12 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
 //                TagName.IBF_TYPE.toString(),
 //                IbfSubPhaseTags.PERSISTED_IBF.value());
 
-        persistIbfSyncData(new IbfSyncData(diffManager.updatePreviousIBFWithResult(), lastRecordCount));
+//        persistIbfSyncData(new IbfSyncData(diffManager.updatePreviousIBFWithResult(), lastRecordCount));
+        try {
+            persistIbfSyncData(new IbfSyncData(fetchSizedIBF(downloadPersistedIBF().smallCellCount), lastRecordCount));
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @VisibleForTesting
@@ -254,10 +259,12 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
         if (debug) {
             return;
         }
-        ByteBuf serializedBuf = Unpooled.buffer(syncData.dataSize());
-        syncDataSerializer.encode(syncData, serializedBuf);
+//        ByteBuf serializedBuf = Unpooled.buffer(syncData.dataSize());
+//        syncDataSerializer.encode(syncData, serializedBuf);
+
         try {
-            storage.put(objectID, serializedBuf);
+//            storage.put(objectID, serializedBuf);
+            storage.put(objectID, syncData.toJson());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -286,8 +293,8 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
             IbfSyncData syncData = (IbfSyncData) runWithDurationReport(
                     IbfTimerSampler.IBF_IBF_DOWNLOAD,
                     () -> {
-                        ByteBuf received = storage.get(objectID);
-                        return syncDataSerializer.decode(received);
+                        String received = storage.retrieve(objectID);
+                        return new IbfSyncData(received);
                     });
             this.lastRecordCount = syncData.lastRecordCount;
             return syncData.persistedIBF;
