@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
     private static final ExampleLogger LOG = ExampleLogger.getMainLogger();
@@ -44,7 +45,7 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
     boolean updatePerformedReplacement = false;
 
     public IbfCheckpointManager(Adapter adapter, IbfPersistentStorage storage, String objectID) {
-        this(adapter, storage, objectID, ResizableInvertibleBloomFilter.Sizes.MEDIUM);
+        this(adapter, storage, objectID, ResizableInvertibleBloomFilter.Sizes.SMALL);
     }
 
     /**
@@ -188,9 +189,12 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
      * @throws IOException
      */
     public void update() throws IOException {
-        if (!diffManager.hasResult()) throw new IllegalStateException("diff() must be called before update()");
-        if (!diffManager.compareSucceeded())
+        if (!diffManager.hasResult()) {
+            throw new IllegalStateException("diff() must be called before update()");
+        }
+        if (!diffManager.compareSucceeded()) {
             throw new IllegalStateException("cannot update unless diff returned a successful result");
+        }
 
 //        if (adapter.ifReplacementRequired()) {
 //            persistIbfSyncData(new IbfSyncData(diffManager.getReplacementIBF(), lastRecordCount));
@@ -207,7 +211,8 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
 
 //        persistIbfSyncData(new IbfSyncData(diffManager.updatePreviousIBFWithResult(), lastRecordCount));
         try {
-            persistIbfSyncData(new IbfSyncData(fetchSizedIBF(downloadPersistedIBF().smallCellCount), lastRecordCount));
+            ResizableInvertibleBloomFilter latestIBf = fetchSizedIBF(downloadPersistedIBF().smallCellCount);
+            persistIbfSyncData(new IbfSyncData(latestIBf, lastRecordCount));
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -470,7 +475,7 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
             if (latestIBF == null) throw new IllegalStateException("missing latest");
 
             SecureTempFileStoredIBF<ResizableInvertibleBloomFilter> previousIBFToSubtract;
-            if (resizedPreviousIBF != null) {
+            if (resizedPreviousIBF != null && isEmpty(resizedPreviousIBF)) {
                 previousIBFToSubtract = resizedPreviousIBF;
             } else {
                 previousIBFToSubtract = previousIBF;
@@ -487,6 +492,13 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
             }
 
             clearResizedPreviousIBF();
+        }
+
+        boolean isEmpty(SecureTempFileStoredIBF<ResizableInvertibleBloomFilter> resizedPreviousIBF){
+            if(resizedPreviousIBF == null){
+                return true;
+            }
+           return Arrays.stream(resizedPreviousIBF.getIBF().cells).filter(Cell::isZero).count() == 0;
         }
 
         boolean compareSucceeded() {

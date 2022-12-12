@@ -99,18 +99,17 @@ public class SecureTempFileStoredIBF<IBFType extends InvertibleBloomFilter> {
         long[] divisorPartitionSum = computeDivisorPartitionSum(resizable.ibf.divisors);
         long[] newDivisorPartitionSum = computeDivisorPartitionSum(resized.divisors);
 
-        {
-            int cellIndex = 0;
-            for (Iterator<Cell> iterator = resizable.iterator(); iterator.hasNext(); cellIndex++) {
-                Cell cell = iterator.next();
-                if (cell.isZero()) continue;
+        int cellIndex = 0;
+        for (Iterator<Cell> iterator = resizable.iterator(); iterator.hasNext(); cellIndex++) {
+            Cell cell = iterator.next();
+            if (cell.isZero()) continue;
 
-                resized.cells
-                        [
-                        convertCellIndex(resized.divisors, divisorPartitionSum, newDivisorPartitionSum, cellIndex)]
-                        .add(cell);
-            }
+            resized.cells
+                    [
+                    convertCellIndex(resized.divisors, divisorPartitionSum, newDivisorPartitionSum, cellIndex)]
+                    .add(cell);
         }
+
 
         return new SecureTempFileStoredIBF<>(resized);
     }
