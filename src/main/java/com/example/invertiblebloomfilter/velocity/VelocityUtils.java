@@ -1,6 +1,8 @@
 package com.example.invertiblebloomfilter.velocity;
 
 import com.example.invertiblebloomfilter.ibf.OneHashingBloomFilterUtils;
+import com.example.invertiblebloomfilter.ibf.OracleColumnInfo;
+import com.example.invertiblebloomfilter.ibf.OracleType;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -13,11 +15,17 @@ import java.util.Map;
 
 public class VelocityUtils {
 
+    public static final String RAW_EXAMPLE_ROWHASH_COLUMN = "raw_example_id";
+    public static final String EXAMPLE_ROWHASH_COLUMN = "example_id";
+
     public static String generateIBFQuery(String templateFilename, String tableName, String[] columnNames, String outputFunction) {
         HashMap<String,Object> hashMap = new HashMap<>();
-        hashMap.put("dataTableName",tableName);
-        hashMap.put("columnNames",columnNames);
+        hashMap.put("table",tableName);
+        hashMap.put("columns",columnNames);
         hashMap.put("output", "#" + outputFunction + "()");
+
+        hashMap.put("rawRowHashIdentifier", RAW_EXAMPLE_ROWHASH_COLUMN);
+        hashMap.put("rowHashIdentifier", EXAMPLE_ROWHASH_COLUMN);
 
         return VelocityUtils.generate(templateFilename, hashMap);
     }
@@ -54,5 +62,36 @@ public class VelocityUtils {
         t.merge(context, writer);
 
         return writer.toString();
+    }
+
+    public class TemplateHelper {
+        public boolean isBinary(OracleColumnInfo columnInfo) {
+            return columnInfo.getType() == OracleType.Type.RAW;
+        }
+
+        public boolean isDate(OracleColumnInfo columnInfo) {
+            return columnInfo.getType() == OracleType.Type.DATE;
+        }
+
+        public boolean isDateTime(OracleColumnInfo columnInfo) {
+            return columnInfo.getOracleType().isDateTimeLike();
+        }
+
+        public boolean isNumber(OracleColumnInfo columnInfo) {
+            return columnInfo.getOracleType().isNumber();
+        }
+
+        public boolean isString(OracleColumnInfo columnInfo) {
+            return columnInfo.getOracleType().isCharacterString();
+        }
+
+        public boolean isUnicode(OracleColumnInfo columnInfo) {
+            return columnInfo.getOracleType().isUnicodeString();
+        }
+
+        public Object escapeDefaultValue(Object entity) {
+            if (entity instanceof String) return "\'" + entity + "\'";
+            return entity;
+        }
     }
 }
