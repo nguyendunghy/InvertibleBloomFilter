@@ -31,7 +31,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
             System.out.println("=====> IBF_QUERY <===== " + ibfQuery);
             jdbcTemplate.query(ibfQuery, resultSet -> {
 
-                while (resultSet.next()) {
+                do {
                     IbfData row = new IbfData(
                             resultSet.getLong("ROW_HASH_NUMBER"),
                             resultSet.getLong("STRING_COLUMN_HASH_NUMBER"),
@@ -42,6 +42,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                     );
                     invertibleBloomFilter.insert(row);
                 }
+                while (resultSet.next());
 
                 System.out.println(invertibleBloomFilter);
             });
@@ -72,7 +73,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
         String retrieveDataQuery = VelocityUtils.generateIBFQuery(
                 "retrieve_data_template.vm",
                 "IBF_DATA",
-                new String[]{"STRING_COLUMN","NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
+                new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
                 "selectChangedData"
         );
         System.out.println(retrieveDataQuery);
@@ -91,7 +92,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
         String retrieveHistoryDataQuery = VelocityUtils.generateIBFQuery(
                 "retrieve_data_template.vm",
                 "IBF_DATA_HISTORY",
-                new String[]{"STRING_COLUMN","NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
+                new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
                 "selectChangedData"
         );
         System.out.println(retrieveHistoryDataQuery);
