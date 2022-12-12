@@ -56,6 +56,9 @@ public class OracleIBFQueryBuilder {
     private int sumKeyLengths;
     private OracleColumnInfo[] arrayOfPrimaryKeys;
 
+    public OracleIBFQueryBuilder() {
+    }
+
     public OracleIBFQueryBuilder(OracleIbfTableInfo ibfTableInfo) {
         if (ibfTableInfo.getOracleTableInfo().getPrimaryKeys().isEmpty()) {
             throw new RuntimeException(ibfTableInfo.getTableRef() + " does not have a primary key");
