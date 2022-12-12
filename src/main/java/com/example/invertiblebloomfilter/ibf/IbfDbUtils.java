@@ -146,6 +146,14 @@ public class IbfDbUtils {
         return getInvertibleBloomFilterTemplate(templateFilename, divisors, templateParams);
     }
 
+    public static String generateResizableInvertibleBloomFilterQuery(
+            String templateFilename, int smallCellCount, ResizingSize size, Map<String, Object> templateParams) {
+
+        long[] divisors = OneHashingBloomFilterUtils.resizingDivisors(smallCellCount, size.resizingFactors);
+
+        return getInvertibleBloomFilterTemplate(templateFilename, divisors, templateParams);
+    }
+
     public static String generatePrimaryKeyStrataEstimatorQuery(
             String templateFilename, Map<String, Object> configurationParams) {
         long[] divisors =
