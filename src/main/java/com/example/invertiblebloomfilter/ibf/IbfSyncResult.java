@@ -62,7 +62,7 @@ public class IbfSyncResult {
                 ibfDecodeResult
                         .bWithoutA
                         .stream()
-                        .map(element -> retrieveRecord(element.rowHashSum + ""))
+                        .map(element -> retrieveHistoryRecord(element.rowHashSum + ""))
 //                        .map(element -> IbfDbUtils.decodePk(primaryKeyTypes, keyLengths, element.keySum))
                         .collect(Collectors.toSet());
         upserts().forEach(bKeys::remove);
@@ -70,6 +70,17 @@ public class IbfSyncResult {
     }
 
     public List<DataTable> retrieveRecord(String rowHash) {
+        String url = "jdbc:oracle:thin:@localhost:49161:XE";
+        String username = "john";
+        String password = "abcd1234";
+        DataSource dataSource = DataSourceUtils.createDataSource(url, username, password);
+        JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(dataSource, new JdbcProperties());
+
+        IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
+        return ibfDataRepo.retrieveAllData(rowHash);
+
+    }
+    public List<DataTable> retrieveHistoryRecord(String rowHash) {
         String url = "jdbc:oracle:thin:@localhost:49161:XE";
         String username = "john";
         String password = "abcd1234";
