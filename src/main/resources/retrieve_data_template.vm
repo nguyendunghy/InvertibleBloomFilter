@@ -1,0 +1,50 @@
+#evaluate($output)
+#macro(selectChangedData)
+SELECT * FROM (#tempNumberizeHashTableData()) WHERE  ROW_HASH_NUMBER = ?
+#end
+
+#macro(tempNumberizeHashTableData)
+SELECT TO_NUMBER(SUBSTR(ROWHASH, 1, 15), 'XXXXXXXXXXXXXXXX')    as ROW_HASH_NUMBER,
+    #set($columnSize = $columnNames.size() - 1)
+    #foreach($i in [0..$columnSize])
+        #if($i > 0)
+        ,
+        #end
+    $columnNames[$i]
+    #end
+FROM (#tempHashTableData())
+#end
+
+#macro(tempHashTableData)
+SELECT DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW(#concatRowData())) as ROWHASH,
+    #set($columnSize = $columnNames.size() - 1)
+    #foreach($i in [0..$columnSize])
+        #if($i > 0)
+        ,
+        #end
+        $columnNames[$i]
+    #end
+FROM (#distinctData())
+#end
+
+#macro(concatRowData)
+    #set($columnSize = $columnNames.size() - 1)
+    #foreach($i in [0..$columnSize])
+        #if($i > 0)
+        || '|' ||
+        #end
+    COALESCE($columnNames[$i],'')
+    #end
+#end
+
+#macro(distinctData)
+SELECT DISTINCT
+    #set($columnSize = $columnNames.size() - 1)
+    #foreach($i in [0..$columnSize])
+        #if($i > 0)
+        ,
+        #end
+    TO_CHAR($columnNames[$i]) AS $columnNames[$i]
+    #end
+FROM $dataTableName
+#end
