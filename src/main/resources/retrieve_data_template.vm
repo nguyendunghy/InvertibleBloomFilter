@@ -31,9 +31,9 @@ FROM (#distinctData())
     #set($columnSize = $columnNames.size() - 1)
     #foreach($i in [0..$columnSize])
         #if($i > 0)
-        ||
+        || '|' ||
         #end
-    COALESCE($columnNames[$i],'-')
+    COALESCE($columnNames[$i],'')
     #end
 #end
 

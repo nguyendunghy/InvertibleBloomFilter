@@ -77,7 +77,7 @@ public class IbfSyncResult {
         JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(dataSource, new JdbcProperties());
 
         IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
-        return ibfDataRepo.retrieveAllData(rowHash);
+        return ibfDataRepo.retrieveAllHistoryData(rowHash);
 
     }
 

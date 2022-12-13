@@ -15,17 +15,11 @@ import java.util.Map;
 
 public class VelocityUtils {
 
-    public static final String RAW_EXAMPLE_ROWHASH_COLUMN = "raw_example_id";
-    public static final String EXAMPLE_ROWHASH_COLUMN = "example_id";
-
     public static String generateIBFQuery(String templateFilename, String tableName, String[] columnNames, String outputFunction) {
         HashMap<String,Object> hashMap = new HashMap<>();
-        hashMap.put("table",tableName);
-        hashMap.put("columns",columnNames);
+        hashMap.put("dataTableName",tableName);
+        hashMap.put("columnNames",columnNames);
         hashMap.put("output", "#" + outputFunction + "()");
-
-        hashMap.put("rawRowHashIdentifier", RAW_EXAMPLE_ROWHASH_COLUMN);
-        hashMap.put("rowHashIdentifier", EXAMPLE_ROWHASH_COLUMN);
 
         return VelocityUtils.generate(templateFilename, hashMap);
     }

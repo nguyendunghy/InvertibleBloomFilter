@@ -15,4 +15,17 @@ public class VelocityUtilsTest {
         System.out.println(retrieveDataQuery);
         Assert.assertNotNull(retrieveDataQuery);
     }
+
+
+    @Test
+    void testGenerateIbfQuery(){
+        String ibfQuery = VelocityUtils.generateIBFQuery(
+                "invertible_bloom_filter.vm",
+                "IBF_DATA",
+                new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
+                "numberizeHashTableData"
+        );
+        System.out.println(ibfQuery);
+        Assert.assertNotNull(ibfQuery);
+    }
 }
