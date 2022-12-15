@@ -6,11 +6,8 @@ import com.example.invertiblebloomfilter.ibf.InvertibleBloomFilter;
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
 import com.example.invertiblebloomfilter.velocity.VelocityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.jdbc.JdbcProperties;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-
-import javax.sql.DataSource;
 import java.util.List;
 
 import static com.example.invertiblebloomfilter.repo.Sql.*;

@@ -1,6 +1,5 @@
 package com.example.invertiblebloomfilter.ibf;
 
-
 import org.apache.commons.codec.binary.Hex;
 
 import java.security.MessageDigest;

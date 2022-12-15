@@ -32,17 +32,12 @@ public class InvertibleBloomFilter {
     }
 
 
-    public long[] getDivisors() {
-        return divisors;
-    }
+
 
     public void setDivisors(long[] divisors) {
         this.divisors = divisors;
     }
 
-    public int getKeyLengthsSum() {
-        return keyLengthsSum;
-    }
 
     public void setKeyLengthsSum(int keyLengthsSum) {
         this.keyLengthsSum = keyLengthsSum;
@@ -67,7 +62,7 @@ public class InvertibleBloomFilter {
         this(keyLengthsSum, OneHashingBloomFilterUtils.primeDivisors(K_INDEPENDENT_HASH_FUNCTIONS, requestedCellCount));
     }
 
-    InvertibleBloomFilter(int keyLengthsSum, long[] divisors) {
+    public InvertibleBloomFilter(int keyLengthsSum, long[] divisors) {
         this.keyLengthsSum = keyLengthsSum;
         this.divisors = divisors;
 
@@ -82,8 +77,7 @@ public class InvertibleBloomFilter {
 //                            }
 //                            return cells;
 //                        });
-        this.cells =
-                new Cell[OneHashingBloomFilterUtils.totalCellCount(divisors)];
+        this.cells = new Cell[OneHashingBloomFilterUtils.totalCellCount(divisors)];
         for (int i = 0; i < cells.length; i++) {
             cells[i] = new Cell(new long[this.keyLengthsSum], 0L, 0L);
         }
@@ -238,6 +232,14 @@ public class InvertibleBloomFilter {
     }
 
     public int keyLengthsSum() {
+        return keyLengthsSum;
+    }
+
+    public long[] getDivisors() {
+        return divisors;
+    }
+
+    public int getKeyLengthsSum() {
         return keyLengthsSum;
     }
 
