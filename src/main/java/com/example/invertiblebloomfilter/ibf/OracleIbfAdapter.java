@@ -169,7 +169,7 @@ public class OracleIbfAdapter implements IbfTableEncoderWithCompoundPK {
         try {
             JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(dataSource,new JdbcProperties());
              IbfDataRepo ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
-            ibfDataRepo.streamIbfData(ibf);
+            ibfDataRepo.streamIbfData(ibf, query);
 
             //retrier.run(() -> executeIbfQueryAndLoad(ibf, query));
         } catch (Exception ex) {

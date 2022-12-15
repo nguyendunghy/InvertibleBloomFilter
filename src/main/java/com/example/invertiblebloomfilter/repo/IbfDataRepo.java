@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface IbfDataRepo {
 
-    void streamIbfData(InvertibleBloomFilter invertibleBloomFilter) throws Exception;
+    void streamIbfData(InvertibleBloomFilter invertibleBloomFilter, String... query) throws Exception;
 
     List<IbfData> findAll();
 

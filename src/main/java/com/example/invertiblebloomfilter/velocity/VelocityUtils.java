@@ -2,6 +2,7 @@ package com.example.invertiblebloomfilter.velocity;
 
 import com.example.invertiblebloomfilter.ibf.OneHashingBloomFilterUtils;
 import com.example.invertiblebloomfilter.ibf.OracleColumnInfo;
+import com.example.invertiblebloomfilter.ibf.OracleIBFQueryBuilder;
 import com.example.invertiblebloomfilter.ibf.OracleType;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
@@ -14,6 +15,20 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class VelocityUtils {
+
+
+
+    public static String generateIBFQuery(String templateFilename, String tableName, OracleColumnInfo[] columnNames,
+                                          String outputFunction) {
+        HashMap<String,Object> hashMap = new HashMap<>();
+        hashMap.put("dataTableName",tableName);
+        hashMap.put("columnNames",columnNames);
+        hashMap.put("helper", new OracleIBFQueryBuilder.TemplateHelper());
+        hashMap.put("dateNumberFormat","DD-MM-YYY");
+        hashMap.put("output", "#" + outputFunction + "()");
+
+        return VelocityUtils.generate(templateFilename, hashMap);
+    }
 
     public static String generateIBFQuery(String templateFilename, String tableName, String[] columnNames, String outputFunction) {
         HashMap<String,Object> hashMap = new HashMap<>();

@@ -162,18 +162,17 @@ public class OracleIBFQueryBuilder {
 //                templateParameters);
 
 
-
         String ibfQuery = VelocityUtils.generateIBFQuery(
                 "invertible_bloom_filter.vm",
                 "IBF_DATA",
-                new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
+                this.arrayOfPrimaryKeys,
                 "numberizeHashTableData"
         );
 
         return ibfQuery;
     }
 
-    public class TemplateHelper {
+    public static class TemplateHelper {
         public boolean isBinary(OracleColumnInfo columnInfo) {
             return columnInfo.getType() == OracleType.Type.RAW;
         }

@@ -15,7 +15,7 @@ FROM (#distinctData())
         #if($i > 0)
         || '|' ||
         #end
-    COALESCE($columnNames[$i],'|')
+    #stringifyNullable($columnNames[$i])
     #end
 #end
 
@@ -26,24 +26,22 @@ SELECT DISTINCT
         #if($i > 0)
         ,
         #end
-    TO_CHAR($columnNames[$i]) AS $columnNames[$i]
+    #stringifyNullable($columnNames[$i]) AS $columnNames[$i]
     #end
 FROM $dataTableName
 #end
 
 
 
-
 #macro(stringifyNullable $column)
     #if ($column.isAddedSinceLastSync())
-        ## Does column have a default value?
         #if ($column.getDefaultValue().isPresent())
             #stringifyDefault($column, $column.getDefaultValue().get())
         #else
-        ''
+        '|'
         #end
     #else
-    COALESCE(#stringify($column), '')
+    COALESCE(#stringify($column), '|')
     #end
 #end
 

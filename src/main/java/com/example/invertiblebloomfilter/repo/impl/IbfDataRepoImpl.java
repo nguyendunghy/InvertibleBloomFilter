@@ -22,14 +22,20 @@ public class IbfDataRepoImpl implements IbfDataRepo {
     }
 
     @Override
-    public void streamIbfData(final InvertibleBloomFilter invertibleBloomFilter) throws Exception {
+    public void streamIbfData(final InvertibleBloomFilter invertibleBloomFilter, String... query) throws Exception {
         try {
-            String ibfQuery = VelocityUtils.generateIBFQuery(
-                    "invertible_bloom_filter.vm",
-                    "IBF_DATA",
-                    new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
-                    "numberizeHashTableData"
-            );
+            String ibfQuery;
+            if (query != null && query.length != 0) {
+                ibfQuery = query[0];
+            } else {
+                 ibfQuery = VelocityUtils.generateIBFQuery(
+                        "invertible_bloom_filter.vm",
+                        "IBF_DATA",
+                        new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
+                        "numberizeHashTableData"
+                );
+            }
+
 //            System.out.println("=====> IBF_QUERY <===== " + ibfQuery);
             jdbcTemplate.query(ibfQuery, resultSet -> {
 

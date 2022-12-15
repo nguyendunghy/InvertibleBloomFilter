@@ -99,9 +99,13 @@ public class IbfCheckpointManagerTest {
         OracleColumn oracleClobColumn = new OracleColumn("CLOB_COLUMN", OracleType.create("CLOB", true), true, tableRef, Optional.empty());
 
         OracleColumnInfo stringOracleColumnInfo = new OracleColumnInfo(oracleStringColumn, stringColumn);
+        stringOracleColumnInfo.setAddedSinceLastSync(false);
         OracleColumnInfo numberOracleColumnInfo = new OracleColumnInfo(oracleNumberColumn, numberColumn);
+        numberOracleColumnInfo.setAddedSinceLastSync(false);
         OracleColumnInfo dateOracleColumnInfo = new OracleColumnInfo(oracleDateColumn, dateColumn);
+        dateOracleColumnInfo.setAddedSinceLastSync(false);
         OracleColumnInfo clobOracleColumnInfo = new OracleColumnInfo(oracleClobColumn, clobColumn);
+        clobOracleColumnInfo.setAddedSinceLastSync(false);
 
         return Arrays.asList(stringOracleColumnInfo, numberOracleColumnInfo, dateOracleColumnInfo, clobOracleColumnInfo);
 

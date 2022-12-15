@@ -64,6 +64,7 @@ public class OracleColumnInfo {
         return addedSinceLastSync;
     }
 
+
     public void setAddedSinceLastSync(boolean addedSinceLastSync) {
         this.addedSinceLastSync = addedSinceLastSync;
     }
