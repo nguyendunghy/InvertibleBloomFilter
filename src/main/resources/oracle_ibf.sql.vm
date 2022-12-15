@@ -15,9 +15,9 @@
  *#
 #macro(invertibleBloomFilter)
     #if($useConnectorAggregation)
-        #invertibleBloomFilterWithConnectorAggregation
+        #invertibleBloomFilterWithConnectorAggregation()
     #else
-#invertibleBloomFilterWithDBAggregation
+        #invertibleBloomFilterWithDBAggregation()
 #end
 #end
 
@@ -31,11 +31,12 @@
         COUNT("_ibf_row_hash")
     FROM (
         #if($fastIbfQuery)
-            #queryWithoutCartesianJoin
+            #queryWithoutCartesianJoin()
         #else
-            #queryWithCartesianJoin
+            #queryWithCartesianJoin()
         #end
-        ) GROUP BY "_ibf_cell_index"#end
+        ) GROUP BY "_ibf_cell_index"
+#end
 
 #macro(invertibleBloomFilterWithConnectorAggregation)
 SELECT #columns() FROM $table

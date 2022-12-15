@@ -1,5 +1,6 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.example.invertiblebloomfilter.utils.FileUtils;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
@@ -32,11 +33,13 @@ public class IbfCheckpointManagerTest {
 
             IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(oracleIbfAdapter, ibfPersistentStorage, objectId);
 
-//            ibfCheckpointManager.simulateResetWithEmptyIBF();
+            if (!checkLocalStorageFileHaveData("IbfLocal/165c56bd-d573-4bc2-9cc9-e36d3ed82fd5")) {
+                ibfCheckpointManager.simulateResetWithEmptyIBF();
+            }
 
             IbfSyncResult ibfSyncResult = ibfCheckpointManager.diff();
 
-           ibfCheckpointManager.update();
+            ibfCheckpointManager.update();
 
             System.out.println("UPSERT :" + ibfSyncResult.upserts());
             System.out.println("DELETE :" + ibfSyncResult.deletes());
@@ -50,6 +53,17 @@ public class IbfCheckpointManagerTest {
         }
 
 
+    }
+
+    private boolean checkLocalStorageFileHaveData(String filePath) {
+        try {
+            String fileContent = FileUtils.readFile(filePath);
+            new IbfSyncData(fileContent);
+            return true;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return false;
     }
 
     private OracleIbfAdapter buildOracleIbfAdapter() {
@@ -82,7 +96,7 @@ public class IbfCheckpointManagerTest {
         OracleColumn oracleStringColumn = new OracleColumn("STRING_COLUMN", OracleType.create("VARCHAR"), true, tableRef, Optional.empty());
         OracleColumn oracleNumberColumn = new OracleColumn("NUMBER_COLUMN", OracleType.create("NUMBER"), true, tableRef, Optional.empty());
         OracleColumn oracleDateColumn = new OracleColumn("DATE_COLUMN", OracleType.create("DATE"), true, tableRef, Optional.empty());
-        OracleColumn oracleClobColumn = new OracleColumn("CLOB_COLUMN", OracleType.create("CLOB",true), true, tableRef, Optional.empty());
+        OracleColumn oracleClobColumn = new OracleColumn("CLOB_COLUMN", OracleType.create("CLOB", true), true, tableRef, Optional.empty());
 
         OracleColumnInfo stringOracleColumnInfo = new OracleColumnInfo(oracleStringColumn, stringColumn);
         OracleColumnInfo numberOracleColumnInfo = new OracleColumnInfo(oracleNumberColumn, numberColumn);
