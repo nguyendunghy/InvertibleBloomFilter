@@ -34,14 +34,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
             jdbcTemplate.query(ibfQuery, resultSet -> {
 
                 do {
-                    IbfData row = new IbfData(
-                            resultSet.getLong("ROW_HASH_NUMBER"),
-                            resultSet.getLong("STRING_COLUMN_HASH_NUMBER"),
-                            resultSet.getLong("NUMBER_COLUMN_HASH_NUMBER"),
-                            resultSet.getLong("DATE_COLUMN_HASH_NUMBER"),
-                            resultSet.getLong("CLOB_COLUMN_HASH_NUMBER")
-
-                    );
+                    IbfData row = new IbfData(resultSet.getLong("ROW_HASH_NUMBER"));
                     invertibleBloomFilter.insert(row);
                 }while (resultSet.next());
 
@@ -59,13 +52,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 IBF_QUERY,
                 (rs, rowNum) ->
                         new IbfData(
-                                rs.getLong("ROW_HASH_NUMBER"),
-                                rs.getLong("STRING_HASH_NUMBER"),
-                                rs.getLong("NUMBER_HASH_NUMBER"),
-                                rs.getLong("DATE_HASH_NUMBER"),
-                                rs.getLong("CLOB_HASH_NUMBER")
-
-                        )
+                                rs.getLong("ROW_HASH_NUMBER"))
         );
     }
 
@@ -77,7 +64,6 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 new String[]{"STRING_COLUMN","NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
                 "selectChangedData"
         );
-//        System.out.println(retrieveDataQuery);
         return jdbcTemplate.query(retrieveDataQuery, new Object[]{rowHash}, (rs, rowNum) ->
                 new DataTable(
                         rs.getLong("ROW_HASH_NUMBER"),
@@ -96,7 +82,6 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 new String[]{"STRING_COLUMN","NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
                 "selectChangedData"
         );
-//        System.out.println(retrieveHistoryDataQuery);
 
         return jdbcTemplate.query(retrieveHistoryDataQuery, new Object[]{rowHash}, (rs, rowNum) ->
                 new DataTable(

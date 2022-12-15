@@ -105,7 +105,7 @@ public class InvertibleBloomFilter {
 
     public void insert(IbfData row) {
         long rowHashNumber = row.getRowHashNumber();
-        long[] hashNumbers = {row.getStringHashNumber(), row.getNumberHashNumber(), row.getDateHashNumber(), row.getClobHashNumber()};
+        long[] hashNumbers = new long[]{};
         insert(hashNumbers, rowHashNumber);
     }
 

@@ -1,25 +1,11 @@
 #evaluate($output)
 #macro(numberizeHashTableData)
-SELECT TO_NUMBER(SUBSTR(ROWHASH, 1, 15), 'XXXXXXXXXXXXXXXX')    as ROW_HASH_NUMBER,
-    #set($columnSize = $columnNames.size() - 1)
-    #foreach($i in [0..$columnSize])
-        #if($i > 0)
-        ,
-        #end
-    TO_NUMBER(SUBSTR($columnNames[$i]_HASH, 1, 15), 'XXXXXXXXXXXXXXXX')    as $columnNames[$i]_HASH_NUMBER
-    #end
+SELECT TO_NUMBER(SUBSTR(ROWHASH, 1, 15), 'XXXXXXXXXXXXXXXX')    as ROW_HASH_NUMBER
 FROM (#hashTableData())
 #end
 
 #macro(hashTableData)
-SELECT DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW(#concatRowData())) as ROWHASH,
-    #set($columnSize = $columnNames.size() - 1)
-    #foreach($i in [0..$columnSize])
-        #if($i > 0)
-        ,
-        #end
-    DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW(COALESCE($columnNames[$i], '|'))) as $columnNames[$i]_HASH
-    #end
+SELECT DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW(#concatRowData())) as ROWHASH
 FROM (#distinctData())
 #end
 
@@ -29,7 +15,7 @@ FROM (#distinctData())
         #if($i > 0)
         || '|' ||
         #end
-    COALESCE($columnNames[$i],'')
+    COALESCE($columnNames[$i],'|')
     #end
 #end
 
