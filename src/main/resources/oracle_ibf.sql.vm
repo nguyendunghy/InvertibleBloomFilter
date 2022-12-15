@@ -1,4 +1,3 @@
-
 #**
 
  Template parameters:
@@ -14,28 +13,36 @@
  $partitionOffsets: long[3] - Provided by ibfDbUtils
  $dateNumberFormat: formatter to read date as a number
  *#
-###invertibleBloomFilter()
-#evaluate($output)
-
 #macro(invertibleBloomFilter)
-SELECT "_ibf_cell_index",
-    #set($lastKeyIndex = $keyLength - 1)
-    #foreach($i in [0..$lastKeyIndex])
-        #aggregate("_ibf_column$i"),
-    #end
-    #aggregate("_ibf_row_hash"),
-       COUNT ("_ibf_row_hash")
-FROM (
-         #if($fastIbfQuery)
-             #queryWithoutCartesianJoin()
-         #else
-             #queryWithCartesianJoin()
-         #end
-         ) GROUP BY "_ibf_cell_index"
+    #if($useConnectorAggregation)
+        #invertibleBloomFilterWithConnectorAggregation
+    #else
+#invertibleBloomFilterWithDBAggregation
+#end
+#end
+
+#macro(invertibleBloomFilterWithDBAggregation)
+    SELECT "_ibf_cell_index",
+        #set($lastKeyIndex = $keyLength - 1)
+        #foreach($i in [0..$lastKeyIndex])
+            #aggregate("_ibf_column$i"),
+        #end
+        #aggregate("_ibf_row_hash"),
+        COUNT("_ibf_row_hash")
+    FROM (
+        #if($fastIbfQuery)
+            #queryWithoutCartesianJoin
+        #else
+            #queryWithCartesianJoin
+        #end
+        ) GROUP BY "_ibf_cell_index"#end
+
+#macro(invertibleBloomFilterWithConnectorAggregation)
+SELECT #columns() FROM $table
 #end
 
 ######
-### Bulding expression on each column
+### Column Expressions
 ######
 #macro(columns)
     #set($endKeys = $keyCount - 1)
@@ -46,7 +53,7 @@ FROM (
         #pkCol($primaryKey $pkLength $colCount)
         #set($colCount = $colCount + $pkLength)
     #end
-    #col2() AS "_ibf_row_hash" ##column represents a row data
+    #col2() AS "_ibf_row_hash"
 #end
 
 #macro(pkCol $primaryKey $pkLength $columnNumber)
@@ -71,8 +78,8 @@ FROM (
     #set($strPosition = 1)
     #set($end = $pkLength + $columnNumber - 1)
     #foreach($i in [$columnNumber..$end])
-    TO_NUMBER(RAWTOHEX(SUBSTR("$primaryKey.name", $strPosition, 8)), 'XXXXXXXXXXXXXXXXXXXX') AS "_ibf_column$i",
-        #set($strPosition = $strPosition + 8)
+        TO_NUMBER(RAWTOHEX(SUBSTR("$primaryKey.name", $strPosition, 8)), 'XXXXXXXXXXXXXXXXXXXX') AS "_ibf_column$i",
+#set($strPosition = $strPosition + 8)
     #end
 #end
 
@@ -81,28 +88,26 @@ FROM (
 ######
 #macro(formatColumn $column)
     #if($helper.isDate($column))
-    TO_NUMBER(TO_CHAR("$column.name", '$dateNumberFormat'))
-    #else
-    "$column.name"
-    #end
+TO_NUMBER(TO_CHAR("$column.name", '$dateNumberFormat'))#else
+"$column.name"#end
 #end
 
 ######
-## Hashing a row with many columns to one value
+## Row hash
 ######
 #macro(col2)
     #if($useLegacyRowHash)
-        #legacyRowHash()
-    #else
-        #defaultRowHash()
-    #end
+  #legacyRowHash
+  #else
+  #defaultRowHash
+  #end
 #end
 
 #macro(legacyRowHash)
     #define($rowRepresentation)
         #foreach ($column in $columns)
             ##      $column is com.example.integrations.oracle.meta.OracleColumnInfo
-            #if ( $foreach.count > 1 ) || '|' ||#end
+            #if ( $foreach.count > 1 ) || '|' || #end
             #stringifyNullable($column)
         #end
     #end
@@ -126,8 +131,8 @@ FROM (
                     #end
                     #md5($stringifiedCol)
                     #if($i < $endCnt)
-                    ||
-                    #end
+                 ||
+                #end
                 #end
             #end
             #md5($colBatch)
@@ -135,11 +140,11 @@ FROM (
             #if($endCnt + 121 > $columns.size())
                 #if($endCnt < $columns.size() - 1)
                 ||
-                #end
+            #end
                 #set($endCnt = $columns.size() - 1)
             #else
             ||
-                #set($endCnt = $endCnt + 121)
+            #set($endCnt = $endCnt + 121)
             #end
         #end
     #end
@@ -150,16 +155,13 @@ FROM (
 ## MD5 "60 bits"
 ######
 #macro(md5_60bits $inner)
-TO_NUMBER(SUBSTR(DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner)), 1, 15), 'XXXXXXXXXXXXXXX')
-#end
+       TO_NUMBER(SUBSTR(DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner)), 1, 15), 'XXXXXXXXXXXXXXX')#end
 
 #macro(md5_60bits_stdHash $inner)
-TO_NUMBER(SUBSTR(#md5($inner), 1, 15), 'XXXXXXXXXXXXXXX')
-#end
+        TO_NUMBER(SUBSTR(#md5($inner), 1, 15), 'XXXXXXXXXXXXXXX')#end
 
 #macro(md5 $input)
-DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW($input)
-#end
+STANDARD_HASH($input, 'MD5')#end
 
 ######
 ## Stringify any nullable column
@@ -169,46 +171,32 @@ DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW($input)
     #if ($column.isAddedSinceLastSync())
         ## Does column have a default value?
         #if ($column.getDefaultValue().isPresent())
-            #stringifyDefault($column, $column.getDefaultValue().get())
-        #else
-        ''
-        #end
+            #stringifyDefault($column, $column.getDefaultValue().get())#else
+''#end
     #else
-    COALESCE(#stringify($column), '')
-    #end
+COALESCE(#stringify($column), '')#end
 #end
 
 #macro(stringify $column)
     #if ($helper.isBinary($column))
-    RAWTOHEX("$column.name")
-    #elseif ($helper.isString($column))
-    "$column.name"
-    #elseif ( $helper.isDate($column))
-    TO_CHAR("$column.name", '$dateNumberFormat')
-    #else
-    TO_CHAR("$column.name")
-    #end
+RAWTOHEX("$column.name")#elseif ($helper.isString($column))
+"$column.name"#elseif ( $helper.isDate($column))
+TO_CHAR("$column.name", '$dateNumberFormat')#else
+TO_CHAR("$column.name")#end
 #end
 
 #macro(stringifyDefault $column, $defaultValue)
     #if ($helper.isBinary($column))
-    RAWTOHEX($defaultValue)
-    #elseif ($helper.isString($column))
-        $helper.escapeDefaultValue($defaultValue)
-    #elseif ( $helper.isDate($column))
-    TO_CHAR($defaultValue, '$dateNumberFormat')
-    #else
-    TO_CHAR($defaultValue)
-    #end
+RAWTOHEX($defaultValue)#elseif ($helper.isString($column))
+        $helper.escapeDefaultValue($defaultValue)#elseif ( $helper.isDate($column))
+TO_CHAR($defaultValue, '$dateNumberFormat')#else
+TO_CHAR($defaultValue)#end
 #end
-
 
 #macro(aggregate $column)
     #if ($useXOR)
-    FT_BITXOR("$column")
-    #else
-    MOD(SUM("$column"),$moduloDivisor)
-    #end
+FT_BITXOR("$column")#else
+MOD(SUM("$column"),$moduloDivisor)#end
 #end
 
 #macro(queryWithoutCartesianJoin)
@@ -218,8 +206,8 @@ DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW($input)
            "_ibf_column$i",
         #end
            "_ibf_row_hash"
-    FROM (SELECT #columns()
-          FROM $table)
+    FROM (
+             SELECT #columns() FROM $table)
         #if($pIndex < 2)
     UNION ALL
         #end
@@ -227,17 +215,22 @@ DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW($input)
 #end
 
 #macro(queryWithCartesianJoin)
-    SELECT CASE "_ibf_hash_index"
-               WHEN 0 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[0]))
-               WHEN 1 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[1])) + $partitionOffsets[1]
-                           WHEN 2 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[2])) + $partitionOffsets[2]
-        END as "_ibf_cell_index",
+    SELECT
+        CASE "_ibf_hash_index"
+            WHEN 0 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[0]))
+            WHEN 1 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[1])) + $partitionOffsets[1]
+            WHEN 2 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[2])) + $partitionOffsets[2]
+            END as "_ibf_cell_index",
         #foreach($i in [0..$lastKeyIndex])
-            "_ibf_column$i",
+        "_ibf_column$i",
         #end
         "_ibf_row_hash"
-    FROM (SELECT "_ibf_hash_index",
-        #columns()
-        FROM $table,
-        (SELECT 0 as "_ibf_hash_index" from dual UNION ALL SELECT 1 from dual UNION ALL SELECT 2 from dual))
+    FROM (
+             SELECT
+                 "_ibf_hash_index",
+                 #columns()
+             FROM $table,
+                 (SELECT 0 as "_ibf_hash_index" from dual UNION ALL SELECT 1 from dual UNION ALL SELECT 2 from dual)
+         )
 #end
+
