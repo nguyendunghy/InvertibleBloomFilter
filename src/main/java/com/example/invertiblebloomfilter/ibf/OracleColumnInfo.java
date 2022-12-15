@@ -6,7 +6,6 @@ import java.util.Optional;
 public class OracleColumnInfo {
     private final OracleColumn sourceColumn;
     private final Column targetColumn;
-
     private Optional<Object> defaultValue = Optional.empty();
 
     /**
@@ -121,6 +120,6 @@ public class OracleColumnInfo {
 
     @Override
     public String toString() {
-        return "OracleColumnInfo{" + getSchemaName() + "." + getTableName() + "." + sourceColumn.name + "}";
+        return sourceColumn.name;
     }
 }

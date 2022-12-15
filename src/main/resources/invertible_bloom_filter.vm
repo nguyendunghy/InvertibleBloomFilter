@@ -15,7 +15,7 @@ FROM (#distinctData())
         #if($i > 0)
         || '|' ||
         #end
-    #stringifyNullable($columnNames[$i])
+        $columnNames[$i]
     #end
 #end
 
@@ -47,13 +47,13 @@ FROM $dataTableName
 
 #macro(stringify $column)
     #if ($helper.isBinary($column))
-        RAWTOHEX("$column")
+        RAWTOHEX($column)
     #elseif ($helper.isString($column))
-        "$column"
+        $column
     #elseif ( $helper.isDate($column))
-        TO_CHAR("$column", '$dateNumberFormat')
+        TO_CHAR($column, '$dateNumberFormat')
     #else
-        TO_CHAR("$column")
+        TO_CHAR($column)
     #end
 #end
 

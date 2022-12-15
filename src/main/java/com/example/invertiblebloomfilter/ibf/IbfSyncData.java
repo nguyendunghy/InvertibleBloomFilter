@@ -17,7 +17,7 @@ public class IbfSyncData {
         this.lastRecordCount = lastRecordCount;
     }
 
-    public IbfSyncData(String json) {
+    public IbfSyncData(String json) throws Exception {
         try {
             IbfSyncData ibfSyncData = mapper.readValue(json, IbfSyncData.class);
             this.persistedIBF = ibfSyncData.persistedIBF;
@@ -25,6 +25,7 @@ public class IbfSyncData {
             this.persistedIBF.indicesHash = OneHashingBloomFilterUtils.indexHashes(this.persistedIBF.divisors);
         } catch (Exception ex) {
             ex.printStackTrace();
+            throw ex;
         }
     }
 

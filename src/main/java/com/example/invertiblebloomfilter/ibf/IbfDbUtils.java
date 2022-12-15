@@ -1,9 +1,16 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.example.invertiblebloomfilter.entity.DataTable;
+import com.example.invertiblebloomfilter.repo.impl.IbfDataRepoImpl;
+import com.example.invertiblebloomfilter.utils.DataSourceUtils;
+import com.example.invertiblebloomfilter.utils.JdbcTemplateUtils;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
+import org.springframework.boot.autoconfigure.jdbc.JdbcProperties;
+import org.springframework.jdbc.core.JdbcTemplate;
 
+import javax.sql.DataSource;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -11,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 
 public class IbfDbUtils {
+
+    private  static DataSource dataSource= null;
     private static final ExampleLogger LOG = ExampleLogger.getMainLogger();
     private static final int SINGLE_KEY_SIZE = 8;
 
@@ -235,4 +244,33 @@ public class IbfDbUtils {
     private static long concatToLong(int hi, int lo) {
         return ((long) hi << 32) | (0xFFFFFFFFL & lo);
     }
+
+
+    public static List<DataTable> retrieveRecord(String rowHash, String retrieveQuery) {
+        IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(buildJdbcTemplate());
+        return ibfDataRepo.retrieveAllData(rowHash,retrieveQuery);
+
+    }
+    public static List<DataTable> retrieveHistoryRecord(String rowHash, String retrieveHistoryQuery) {
+        IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(buildJdbcTemplate());
+        return ibfDataRepo.retrieveAllHistoryData(rowHash,retrieveHistoryQuery);
+
+    }
+
+    private static DataSource buildDataSource(){
+        String url = "jdbc:oracle:thin:@localhost:49161:XE";
+        String username = "john";
+        String password = "abcd1234";
+        return DataSourceUtils.createDataSource(url, username, password);
+    }
+
+    private static JdbcTemplate buildJdbcTemplate(){
+        if(dataSource == null){
+            dataSource = buildDataSource();
+        }
+
+        return JdbcTemplateUtils.buildJdbcTemplate(dataSource, new JdbcProperties());
+    }
+
+
 }

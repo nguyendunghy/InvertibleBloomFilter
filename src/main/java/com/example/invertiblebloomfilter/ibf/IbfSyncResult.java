@@ -1,19 +1,16 @@
 package com.example.invertiblebloomfilter.ibf;
 
 import com.example.invertiblebloomfilter.entity.DataTable;
-import com.example.invertiblebloomfilter.repo.impl.IbfDataRepoImpl;
-import com.example.invertiblebloomfilter.utils.DataSourceUtils;
-import com.example.invertiblebloomfilter.utils.JdbcTemplateUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import org.springframework.boot.autoconfigure.jdbc.JdbcProperties;
-import org.springframework.jdbc.core.JdbcTemplate;
 
-import javax.sql.DataSource;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static com.example.invertiblebloomfilter.ibf.IbfDbUtils.retrieveHistoryRecord;
+import static com.example.invertiblebloomfilter.ibf.IbfDbUtils.retrieveRecord;
 
 public class IbfSyncResult {
 
@@ -21,6 +18,11 @@ public class IbfSyncResult {
     private final List<Integer> keyLengths;
     @VisibleForTesting
     public final IBFDecodeResult ibfDecodeResult;
+
+    private String retrieveQuery;
+
+    private String retrieveHistoryQuery;
+
 
     @VisibleForTesting
     public IbfSyncResult(List<DataType> primaryKeyTypes, List<Integer> keyLengths) {
@@ -47,7 +49,7 @@ public class IbfSyncResult {
         return ibfDecodeResult
                 .aWithoutB
                 .stream()
-                .map(element -> retrieveRecord(element.rowHashSum + ""))
+                .map(element -> retrieveRecord(element.rowHashSum + "", retrieveQuery))
 //                .map(element -> IbfDbUtils.decodePk(primaryKeyTypes, keyLengths, element.keySum))
                 // sorting the primary keys causes rows from the same page in the database to be fetched together
                 .sorted(new ListComparator<>())
@@ -62,34 +64,21 @@ public class IbfSyncResult {
                 ibfDecodeResult
                         .bWithoutA
                         .stream()
-                        .map(element -> retrieveHistoryRecord(element.rowHashSum + ""))
+                        .map(element -> retrieveHistoryRecord(element.rowHashSum + "", retrieveHistoryQuery))
 //                        .map(element -> IbfDbUtils.decodePk(primaryKeyTypes, keyLengths, element.keySum))
                         .collect(Collectors.toSet());
         upserts().forEach(bKeys::remove);
         return bKeys;
     }
 
-    public List<DataTable> retrieveRecord(String rowHash) {
-        String url = "jdbc:oracle:thin:@localhost:49161:XE";
-        String username = "john";
-        String password = "abcd1234";
-        DataSource dataSource = DataSourceUtils.createDataSource(url, username, password);
-        JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(dataSource, new JdbcProperties());
 
-        IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
-        return ibfDataRepo.retrieveAllData(rowHash);
 
+    public void setRetrieveQuery(String retrieveQuery) {
+        this.retrieveQuery = retrieveQuery;
     }
-    public List<DataTable> retrieveHistoryRecord(String rowHash) {
-        String url = "jdbc:oracle:thin:@localhost:49161:XE";
-        String username = "john";
-        String password = "abcd1234";
-        DataSource dataSource = DataSourceUtils.createDataSource(url, username, password);
-        JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(dataSource, new JdbcProperties());
 
-        IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
-        return ibfDataRepo.retrieveAllHistoryData(rowHash);
-
+    public void setRetrieveHistoryQuery(String retrieveHistoryQuery) {
+        this.retrieveHistoryQuery = retrieveHistoryQuery;
     }
 
     public boolean getSucceeded() {

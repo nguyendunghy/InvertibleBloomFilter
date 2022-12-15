@@ -12,8 +12,8 @@ public interface IbfDataRepo {
 
     List<IbfData> findAll();
 
-    List<DataTable> retrieveAllData(String rowHash);
+    List<DataTable> retrieveAllData(String rowHash, String... query);
 
-    List<DataTable> retrieveAllHistoryData(String rowHash);
+    List<DataTable> retrieveAllHistoryData(String rowHash, String... query);
 
 }

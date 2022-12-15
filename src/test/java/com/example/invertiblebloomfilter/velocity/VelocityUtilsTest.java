@@ -1,15 +1,34 @@
 package com.example.invertiblebloomfilter.velocity;
 
+import com.example.invertiblebloomfilter.ibf.*;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
 public class VelocityUtilsTest {
     @Test
-    void testGenerateRetrieveQuery(){
+    void testGenerateRetrieveQuery() {
         String retrieveDataQuery = VelocityUtils.generateIBFQuery(
                 "retrieve_data_template.vm",
                 "IBF_DATA",
-                new String[]{"STRING_COLUMN","NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
+                new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
+                "selectChangedData"
+        );
+        System.out.println(retrieveDataQuery);
+        Assert.assertNotNull(retrieveDataQuery);
+    }
+
+    @Test
+    void testGenerateRetrieveQueryWithOracleColumnInfo() {
+        TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
+        List<OracleColumnInfo> columns = buildColumns(tableRef);
+        String retrieveDataQuery = VelocityUtils.generateIBFQuery(
+                "retrieve_data_template.vm",
+                "IBF_DATA",
+                columns.toArray(new OracleColumnInfo[]{}),
                 "selectChangedData"
         );
         System.out.println(retrieveDataQuery);
@@ -18,7 +37,7 @@ public class VelocityUtilsTest {
 
 
     @Test
-    void testGenerateIbfQuery(){
+    void testGenerateIbfQuery() {
         String ibfQuery = VelocityUtils.generateIBFQuery(
                 "invertible_bloom_filter.vm",
                 "IBF_DATA",
@@ -27,5 +46,56 @@ public class VelocityUtilsTest {
         );
         System.out.println(ibfQuery);
         Assert.assertNotNull(ibfQuery);
+    }
+
+    @Test
+    void testGenerateIbfQueryWithOracleColumnInfo() {
+        TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
+        List<OracleColumnInfo> columns = buildColumns(tableRef);
+
+        String ibfQuery = VelocityUtils.generateIBFQuery(
+                "invertible_bloom_filter.vm",
+                "IBF_DATA",
+                columns.toArray(new OracleColumnInfo[]{}),
+                "numberizeHashTableData"
+        );
+        System.out.println(ibfQuery);
+        Assert.assertNotNull(ibfQuery);
+    }
+
+    private List<OracleColumnInfo> buildColumns(TableRef tableRef) {
+
+        Column stringColumn = new Column("STRING_COLUMN", DataType.String, true);
+        Column numberColumn = new Column("NUMBER_COLUMN", DataType.Long, true);
+        Column dateColumn = new Column("DATE_COLUMN", DataType.LocalDate, true);
+        Column clobColumn = new Column("CLOB_COLUMN", DataType.String, true);
+
+        OracleColumn oracleStringColumn = new OracleColumn("STRING_COLUMN", OracleType.create("VARCHAR"), true, tableRef, Optional.empty());
+        oracleStringColumn.setDataDefault(Optional.of("|"));
+        OracleColumn oracleNumberColumn = new OracleColumn("NUMBER_COLUMN", OracleType.create("NUMBER"), true, tableRef, Optional.empty());
+        oracleNumberColumn.setDataDefault(Optional.of("0"));
+        OracleColumn oracleDateColumn = new OracleColumn("DATE_COLUMN", OracleType.create("DATE"), true, tableRef, Optional.empty());
+        oracleDateColumn.setDataDefault(Optional.of("15-12-2022"));
+        OracleColumn oracleClobColumn = new OracleColumn("CLOB_COLUMN", OracleType.create("CLOB", true), true, tableRef, Optional.empty());
+        oracleDateColumn.setDataDefault(Optional.of("|"));
+
+        OracleColumnInfo stringOracleColumnInfo = new OracleColumnInfo(oracleStringColumn, stringColumn);
+        stringOracleColumnInfo.parseAndSetDataDefaultExpression();
+        stringOracleColumnInfo.setAddedSinceLastSync(true);
+
+        OracleColumnInfo numberOracleColumnInfo = new OracleColumnInfo(oracleNumberColumn, numberColumn);
+        numberOracleColumnInfo.setAddedSinceLastSync(true);
+        numberOracleColumnInfo.parseAndSetDataDefaultExpression();
+
+        OracleColumnInfo dateOracleColumnInfo = new OracleColumnInfo(oracleDateColumn, dateColumn);
+        dateOracleColumnInfo.setAddedSinceLastSync(true);
+        dateOracleColumnInfo.parseAndSetDataDefaultExpression();
+
+        OracleColumnInfo clobOracleColumnInfo = new OracleColumnInfo(oracleClobColumn, clobColumn);
+        clobOracleColumnInfo.setAddedSinceLastSync(true);
+        clobOracleColumnInfo.parseAndSetDataDefaultExpression();
+
+        return Arrays.asList(stringOracleColumnInfo, numberOracleColumnInfo, dateOracleColumnInfo, clobOracleColumnInfo);
+
     }
 }

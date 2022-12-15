@@ -87,6 +87,10 @@ public class OracleColumn {
         return dataDefault;
     }
 
+    public void setDataDefault(Optional<String> dataDefault) {
+        this.dataDefault = dataDefault;
+    }
+
     public TableRef getSourceTable() {
         return sourceTable;
     }

@@ -269,4 +269,7 @@ public class OracleIbfAdapter implements IbfTableEncoderWithCompoundPK {
         return oracleTableInfo;
     }
 
+    public OracleIBFQueryBuilder getIbfQueryBuilder() {
+        return ibfQueryBuilder;
+    }
 }

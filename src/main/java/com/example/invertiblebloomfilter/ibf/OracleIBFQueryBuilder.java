@@ -4,20 +4,18 @@ import com.example.invertiblebloomfilter.velocity.VelocityUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
+import org.apache.commons.io.IOUtils;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
-import org.apache.commons.io.IOUtils;
-
 
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class OracleIBFQueryBuilder {
@@ -164,12 +162,32 @@ public class OracleIBFQueryBuilder {
 
         String ibfQuery = VelocityUtils.generateIBFQuery(
                 "invertible_bloom_filter.vm",
-                "IBF_DATA",
+                ibfTableInfo.getTableRef().name,
                 this.arrayOfPrimaryKeys,
                 "numberizeHashTableData"
         );
 
         return ibfQuery;
+    }
+
+    public String retrieveAllDataQuery() {
+        String retrieveDataQuery = VelocityUtils.generateIBFQuery(
+                "retrieve_data_template.vm",
+                ibfTableInfo.getTableRef().name,
+                this.arrayOfPrimaryKeys,
+                "selectChangedData"
+        );
+        return retrieveDataQuery;
+    }
+
+    public String retrieveAllHistoryDataQuery() {
+        String retrieveDataQuery = VelocityUtils.generateIBFQuery(
+                "retrieve_data_template.vm",
+                "IBF_DATA_HISTORY",
+                this.arrayOfPrimaryKeys,
+                "selectChangedData"
+        );
+        return retrieveDataQuery;
     }
 
     public static class TemplateHelper {

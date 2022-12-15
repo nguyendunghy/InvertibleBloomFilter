@@ -33,7 +33,7 @@ FROM (#distinctData())
         #if($i > 0)
         || '|' ||
         #end
-    COALESCE($columnNames[$i],'')
+        $columnNames[$i]
     #end
 #end
 
@@ -44,7 +44,33 @@ SELECT DISTINCT
         #if($i > 0)
         ,
         #end
-    TO_CHAR($columnNames[$i]) AS $columnNames[$i]
+    #stringifyNullable($columnNames[$i]) AS $columnNames[$i]
     #end
 FROM $dataTableName
+#end
+
+
+
+#macro(stringifyNullable $column)
+    #if ($column.isAddedSinceLastSync())
+        #if ($column.getDefaultValue().isPresent())
+            #stringifyDefault($column, $column.getDefaultValue().get())
+        #else
+        '|'
+        #end
+    #else
+    COALESCE(#stringify($column), '|')
+    #end
+#end
+
+#macro(stringify $column)
+    #if ($helper.isBinary($column))
+    RAWTOHEX($column)
+    #elseif ($helper.isString($column))
+        $column
+    #elseif ( $helper.isDate($column))
+    TO_CHAR($column, '$dateNumberFormat')
+    #else
+    TO_CHAR($column)
+    #end
 #end

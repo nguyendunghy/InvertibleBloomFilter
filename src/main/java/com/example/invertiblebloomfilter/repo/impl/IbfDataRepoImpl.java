@@ -8,6 +8,7 @@ import com.example.invertiblebloomfilter.velocity.VelocityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 
 import static com.example.invertiblebloomfilter.repo.Sql.*;
@@ -17,7 +18,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    public  IbfDataRepoImpl(JdbcTemplate jdbcTemplate) {
+    public IbfDataRepoImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -28,7 +29,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
             if (query != null && query.length != 0) {
                 ibfQuery = query[0];
             } else {
-                 ibfQuery = VelocityUtils.generateIBFQuery(
+                ibfQuery = VelocityUtils.generateIBFQuery(
                         "invertible_bloom_filter.vm",
                         "IBF_DATA",
                         new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
@@ -42,7 +43,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 do {
                     IbfData row = new IbfData(resultSet.getLong("ROW_HASH_NUMBER"));
                     invertibleBloomFilter.insert(row);
-                }while (resultSet.next());
+                } while (resultSet.next());
 
                 System.out.println(invertibleBloomFilter);
             });
@@ -63,13 +64,18 @@ public class IbfDataRepoImpl implements IbfDataRepo {
     }
 
     @Override
-    public List<DataTable> retrieveAllData(String rowHash) {
-        String retrieveDataQuery = VelocityUtils.generateIBFQuery(
-                "retrieve_data_template.vm",
-                "IBF_DATA",
-                new String[]{"STRING_COLUMN","NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
-                "selectChangedData"
-        );
+    public List<DataTable> retrieveAllData(String rowHash, String... query) {
+        String retrieveDataQuery;
+        if (query != null && query.length != 0) {
+            retrieveDataQuery = query[0];
+        } else {
+            retrieveDataQuery = VelocityUtils.generateIBFQuery(
+                    "retrieve_data_template.vm",
+                    "IBF_DATA",
+                    new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
+                    "selectChangedData"
+            );
+        }
         return jdbcTemplate.query(retrieveDataQuery, new Object[]{rowHash}, (rs, rowNum) ->
                 new DataTable(
                         rs.getLong("ROW_HASH_NUMBER"),
@@ -81,13 +87,19 @@ public class IbfDataRepoImpl implements IbfDataRepo {
     }
 
     @Override
-    public List<DataTable> retrieveAllHistoryData(String rowHash) {
-        String retrieveHistoryDataQuery = VelocityUtils.generateIBFQuery(
-                "retrieve_data_template.vm",
-                "IBF_DATA_HISTORY",
-                new String[]{"STRING_COLUMN","NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
-                "selectChangedData"
-        );
+    public List<DataTable> retrieveAllHistoryData(String rowHash, String... query) {
+        String retrieveHistoryDataQuery;
+
+        if (query != null && query.length != 0) {
+            retrieveHistoryDataQuery = query[0];
+        } else {
+            retrieveHistoryDataQuery = VelocityUtils.generateIBFQuery(
+                    "retrieve_data_template.vm",
+                    "IBF_DATA_HISTORY",
+                    new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
+                    "selectChangedData"
+            );
+        }
 
         return jdbcTemplate.query(retrieveHistoryDataQuery, new Object[]{rowHash}, (rs, rowNum) ->
                 new DataTable(

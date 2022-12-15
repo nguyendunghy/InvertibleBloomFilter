@@ -97,7 +97,7 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
      * @throws IOException
      * @throws SQLException
      */
-    public IbfSyncResult diff() throws IOException, SQLException {
+    public IbfSyncResult    diff() throws IOException, SQLException {
         //Step 0: ????
         if (adapter.ifReplacementRequired()) {
             diffManager.setReplacementIBF(fetchStartingSizedIBFWithColumnDefaults());
@@ -168,6 +168,9 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
         } else {
             ibfSyncResult = new IbfSyncResult(diffManager.getResult(), adapter.keyType(), adapter.keyLength());
         }
+        ibfSyncResult.setRetrieveQuery(((OracleIbfAdapter)this.adapter).getIbfQueryBuilder().retrieveAllDataQuery());
+        ibfSyncResult.setRetrieveHistoryQuery(((OracleIbfAdapter)this.adapter).getIbfQueryBuilder().retrieveAllHistoryDataQuery());
+
         this.lastRecordCount = ibfSyncResult.upserts().size() + ibfSyncResult.deletes().size();
         return ibfSyncResult;
     }
