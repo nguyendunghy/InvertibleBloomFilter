@@ -39,9 +39,9 @@ public class ResizableInvertibleBloomFilter extends InvertibleBloomFilter {
     public static final Sizes[] SIZES_ATTEMPT_ORDER = new Sizes[]{SMALL, MEDIUM, LARGE, XLARGE};
 
     @VisibleForTesting
-    public int smallCellCount;
+    public  int smallCellCount;
 
-    private Sizes size;
+    private  Sizes size;
 
     /**
      * Construct an empty Resizable Invertible Bloom Filter. The ResizableInvertibleBloomFilter will have smallCellCount

@@ -121,7 +121,7 @@ public class OracleIbfAdapter implements IbfTableEncoderWithCompoundPK {
     @Override
     public ResizableInvertibleBloomFilter getReplacementResizableInvertibleBloomFilter(
             int smallCellCount, ResizableInvertibleBloomFilter.Sizes size) throws SQLException {
-        return newResizableInvertibleBloomFilter(smallCellCount, size, OracleIBFQueryBuilder.IBFType.TRANSITION);
+        return newResizableInvertibleBloomFilter(smallCellCount, size, OracleIBFQueryBuilder.IBFType.TRANSITIONAL);
     }
 
     @SuppressWarnings("java:S1172")

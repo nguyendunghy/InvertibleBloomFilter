@@ -205,6 +205,7 @@ public class IbfDbUtils {
                     offset++;
                     break;
                 case String:
+                case Binary:
                     keys.add(decodeStringPk(keySums, offset, keyLengths.get(i)));
                     offset += keyLengths.get(i);
                     break;
@@ -229,5 +230,9 @@ public class IbfDbUtils {
             }
         }
         return result.toString();
+    }
+
+    private static long concatToLong(int hi, int lo) {
+        return ((long) hi << 32) | (0xFFFFFFFFL & lo);
     }
 }

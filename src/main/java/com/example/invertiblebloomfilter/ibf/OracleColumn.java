@@ -25,7 +25,7 @@ public class OracleColumn {
     /** The value from all_tab_columns.data_default. Can represent a literal value or a PL/SQL expression. */
     private Optional<String> dataDefault = Optional.empty();
 
-    OracleColumn(
+    public OracleColumn(
             String name,
             OracleType oracleType,
             boolean primaryKey,

@@ -5,6 +5,8 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
+import static com.example.invertiblebloomfilter.ibf.InvertibleBloomFilter.K_INDEPENDENT_HASH_FUNCTIONS;
+
 /**
  * Functions for using the One Hashing Bloom Filter (OHBF) [1] scheme with InvertibleBloomFilter. The OHBF scheme
  * computes a single hash function on the element being inserted and then uses k-consecutive prime numbers as divisors
@@ -42,6 +44,20 @@ public class OneHashingBloomFilterUtils {
         }
 
         return divisors;
+    }
+
+    public static long[] resizingDivisors(int smallCellCount, int[] resizingFactors) {
+        long[] divisors = new long[K_INDEPENDENT_HASH_FUNCTIONS];
+        long[] primeDivisors = primeDivisors(smallCellCount);
+        for (int i = 0; i < K_INDEPENDENT_HASH_FUNCTIONS; i++) {
+            divisors[i] = primeDivisors[i] * resizingFactors[i];
+        }
+
+        return divisors;
+    }
+
+    public static long[] primeDivisors(int requestedCellCount) {
+        return nPrimeNumbersAfter(K_INDEPENDENT_HASH_FUNCTIONS, requestedCellCount / 3 + 1);
     }
 
     public static long[] primeDivisors(int k, int requestedCellCount) {
