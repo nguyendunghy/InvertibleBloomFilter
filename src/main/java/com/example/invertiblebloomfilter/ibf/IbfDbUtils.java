@@ -247,11 +247,13 @@ public class IbfDbUtils {
 
 
     public static List<DataTable> retrieveRecord(String rowHash, String retrieveQuery) {
+        System.out.println("retrieveRecord ROW_HASH " + rowHash);
         IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(buildJdbcTemplate());
         return ibfDataRepo.retrieveAllData(rowHash,retrieveQuery);
 
     }
     public static List<DataTable> retrieveHistoryRecord(String rowHash, String retrieveHistoryQuery) {
+        System.out.println("retrieveHistoryRecord ROW_HASH " + rowHash);
         IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(buildJdbcTemplate());
         return ibfDataRepo.retrieveAllHistoryData(rowHash,retrieveHistoryQuery);
 

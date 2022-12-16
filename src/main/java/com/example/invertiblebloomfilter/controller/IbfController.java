@@ -44,8 +44,12 @@ public class IbfController {
         InvertibleBloomFilter newIBF = new InvertibleBloomFilter(4, 7);
         ibfService.streamIbfData(newIBF);
 
+        InvertibleBloomFilter copiedNewIbf = newIBF.copy();
+
         InvertibleBloomFilter diff = newIBF.subtract(oldIBF);
         IBFDecodeResult result = diff.decode();
+
+        ibfService.saveIbf(copiedNewIbf);
 
         return CommonResponse.builder()
                 .code(Constant.SUCCESS_CODE)
