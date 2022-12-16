@@ -38,7 +38,7 @@ FROM $dataTableName
         #if ($column.getDefaultValue().isPresent())
             #stringifyDefault($column, $column.getDefaultValue().get())
         #else
-        '|'
+        ''
         #end
     #else
     COALESCE(#stringify($column), '|')
