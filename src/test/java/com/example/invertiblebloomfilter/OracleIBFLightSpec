@@ -1,0 +1,354 @@
+package com.example.integrations.oracle.ibf;
+
+import static com.example.integrations.oracle.ibf.OracleibfTestUtil.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+
+import com.example.core.SyncMode;
+import com.example.core.TableRef;
+import com.example.integrations.db.FeatureFlagHelper;
+import com.example.integrations.oracle.MockResultSetBuilder;
+import com.example.integrations.oracle.OracleColumn;
+import com.example.integrations.oracle.OracleState;
+import com.example.integrations.oracle.meta.OracleColumnInfo;
+import com.example.integrations.oracle.meta.OracleTableInfo;
+import com.example.integrations.oracle.meta.OracleTableInfoContext;
+import com.example.integrations.oracle.meta.OracleTableMetricsProvider;
+import com.example.lambda.Retrier;
+import com.example.ibf.ResizingSize;
+import com.example.ibf.ibfTemplate;
+import com.example.ibf.schema.ibfColumnInfo;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.SQLRecoverableException;
+import java.sql.Statement;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+
+/** These tests do not require docker. */
+public class OracleibfIBFLightSpec {
+
+    @Rule public FeatureFlagHelper flagHelper = new FeatureFlagHelper();
+
+    private OracleConnectoribfTestContext testContext = new OracleConnectoribfTestContext();
+
+    @After
+    public void afterTest() {
+        flagHelper.clearFlags();
+    }
+
+    @Before
+    public void initTest() {
+        testContext.oracleState(new OracleState()).oracleTableMetricsProvider(mock(OracleTableMetricsProvider.class));
+
+        ibfTemplate.setObfuscate(false);
+        ibfTemplate.setReduceWhitespace(false);
+    }
+
+    @Test
+    public void testQueryTemplate_FixedSizeIBF() {
+        OracleIBFQueryBuilder ibfQueryBuilder =
+                queryBuilder(getDefaultTestTable(), SyncMode.Legacy, OracleibfTestUtil::columnsForTestTable1)
+                        .setFixedSize(true)
+                        .setCellCount(300);
+
+        // Assert that the cell count was converted into expected hash bucket index ranges
+        innerAsserts1(ibfQueryBuilder.buildQuery());
+    }
+
+    @Test
+    public void testQueryTemplate_ResizableIBF() {
+        OracleIBFQueryBuilder ibfQueryBuilder =
+                queryBuilder(getDefaultTestTable(), SyncMode.Legacy, OracleibfTestUtil::columnsForTestTable1)
+                        .setCellCount(300)
+                        .setIbfSizes(ResizingSize.SMALL);
+
+        // Assert that the cell count was converted into expected hash bucket index ranges
+        innerAsserts1(ibfQueryBuilder.buildQuery());
+    }
+
+    private void innerAsserts1(String query) {
+        assertTrue(query.contains("101))"));
+        assertTrue(query.contains("103)) + 101"));
+        assertTrue(query.contains("107)) + 204"));
+
+        // Assert that expected  columns are present in query
+        assertTrue(query.contains("PRIMARY_KEY"));
+        assertTrue(query.contains("UNSIGNED_SMALLINT_TEST"));
+        assertTrue(query.contains("SIGNED_MEDIUMINT_TEST"));
+        assertTrue(query.contains("UNSIGNED_MEDIUMINT_TEST"));
+        assertTrue(query.contains("YEAR_TEST"));
+        assertTrue(query.contains("SIGNED_INT_TEST"));
+    }
+
+    @Test
+    public void testQueryTemplate2() {
+        String query =
+                queryBuilder(getDefaultTestTable(), SyncMode.Legacy, OracleibfTestUtil::columnsForTestTable2)
+                        .setFixedSize(true)
+                        .setCellCount(300)
+                        .buildQuery();
+
+        // Assert expected columns are present in query
+        assertTrue(query.contains("UPDATABLE_COLUMN"));
+        assertTrue(query.contains("TO_CHAR(\"PRIMARY_KEY\")"));
+    }
+
+    @Test
+    public void testQueryTemplate3() {
+        String query =
+                queryBuilder(getDefaultTestTable(), SyncMode.Legacy, OracleibfTestUtil::columnsForTestTable3)
+                        .setFixedSize(true)
+                        .setCellCount(300)
+                        .buildQuery();
+
+        // Assert expected columns are present in query
+        assertTrue(query.contains("COALESCE(\"PRIMARY_KEY\""));
+        assertTrue(query.contains("TO_CHAR(\"UPDATABLE_COLUMN\")"));
+        assertTrue(query.contains("\"_ibf_column15\""));
+    }
+
+    @Test
+    public void testQueryTemplateCompoundKey() {
+        String query =
+                queryBuilder(getDefaultTestTable(), SyncMode.History, OracleibfTestUtil::columnsForTestTable4)
+                        .setFixedSize(true)
+                        .setCellCount(300)
+                        .buildQuery();
+
+        // Assert expected columns are present in query
+        assertTrue(query.contains("COALESCE(TO_CHAR(\"PRIMARY_KEYA\")"));
+        assertTrue(query.contains("COALESCE(\"UPDATABLE_COLUMN\""));
+        assertTrue(query.contains("\"_ibf_column1\""));
+    }
+
+    @Test
+    public void testQueryTemplateCompoundKeyMixed() {
+        String query =
+                queryBuilder(getDefaultTestTable(), SyncMode.History, OracleibfTestUtil::columnsForTestTable5)
+                        .setFixedSize(true)
+                        .setCellCount(300)
+                        .buildQuery();
+
+        // Assert expected columns are present in query
+        assertTrue(query.contains("COALESCE(TO_CHAR(\"PRIMARY_KEYA\")"));
+        assertTrue(query.contains("COALESCE(\"UPDATABLE_COLUMN\""));
+        assertTrue(query.contains("\"_ibf_column16\""));
+    }
+
+    @Test
+    public void adapter_RetryOnRecoverableException() throws Exception {
+        TableRef tableRef = new TableRef("test_schema", "table1");
+
+        List<OracleColumn> columns = new ArrayList<>();
+        columns.add(new OracleColumn("ID", NUMBER, true, tableRef, Optional.empty()));
+        OracleTableInfo tableInfo = newOracleTableInfo(tableRef, SyncMode.Legacy, columns);
+
+        Connection mockConnection = mockConnection(mockPreparedStatement(new SQLRecoverableException()));
+        testContext.dataSource(mockDataSource(mockConnection));
+
+        mockOracleDbVersion(mockConnection);
+
+        OracleibfAdapter adapter = testContext.getOracleibfContext().getOracleibfAdapter(tableInfo);
+
+        try {
+            adapter.getInvertibleBloomFilter(300);
+            fail("A RetrierException should have been thrown");
+        } catch (Retrier.RetrierException expected) {
+            assertTrue(expected.getCause() instanceof SQLRecoverableException);
+        }
+    }
+
+    @Test
+    public void adapter_RetryOnRecoverableException2() throws Exception {
+        TableRef tableRef = new TableRef("test_schema", "table1");
+
+        List<OracleColumn> columns = new ArrayList<>();
+        columns.add(new OracleColumn("ID", NUMBER, true, tableRef, Optional.empty()));
+        OracleTableInfo tableInfo = newOracleTableInfo(tableRef, SyncMode.Legacy, columns);
+
+        Connection mockConnection =
+                mockPrepareStatement(
+                        mockCreateStatement(mockConnection(), mockStatementExecute(mockStatement())),
+                        mockExecuteQuery(mockPreparedStatement(), new SQLRecoverableException()));
+
+        testContext.dataSource(mockDataSource(mockConnection));
+
+        mockOracleDbVersion(mockConnection);
+
+        OracleibfAdapter adapter = testContext.getOracleibfContext().getOracleibfAdapter(tableInfo);
+
+        try {
+            adapter.getInvertibleBloomFilter(300);
+            fail("A RetrierException should have been thrown");
+        } catch (Retrier.RetrierException expected) {
+            assertTrue(expected.getCause() instanceof SQLRecoverableException);
+        }
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void queryBuilder_unsupportedPkType() {
+        queryBuilder(getDefaultTestTable(), SyncMode.Legacy, OracleibfTestUtil::columnsForTestTableIllegalPkType)
+                .buildQuery();
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void queryBuilder_missingPk() {
+        queryBuilder(getDefaultTestTable(), SyncMode.Legacy, OracleibfTestUtil::columnsForTestTableNoPk)
+                .templateParameters();
+    }
+
+    @Test
+    public void queryBuilder_templateParametersRegularIbf() {
+        TableRef tableRef = getDefaultTestTable();
+
+        OracleIBFQueryBuilder ibfQueryBuilder =
+                queryBuilder(tableRef, SyncMode.Legacy, OracleibfTestUtil::columnsForIbfReplacementTest)
+                        .setCellCount(300)
+                        .setIbfType(OracleIBFQueryBuilder.IBFType.REGULAR);
+
+        Map<String, Object> templateParameters = ibfQueryBuilder.templateParameters();
+
+        List<OracleColumnInfo> columns = (List<OracleColumnInfo>) templateParameters.get("columns");
+        assertEquals(3, columns.size());
+    }
+
+    @Test
+    public void queryBuilder_templateParametersReplacmentIbf() {
+        TableRef tableRef = getDefaultTestTable();
+
+        OracleIBFQueryBuilder ibfQueryBuilder =
+                queryBuilder(tableRef, SyncMode.Legacy, OracleibfTestUtil::columnsForIbfReplacementTest)
+                        .setCellCount(300)
+                        .setIbfType(OracleIBFQueryBuilder.IBFType.TRANSITIONAL);
+
+        setModifiedColumns(tableRef, "COL2");
+
+        Map<String, Object> templateParameters = ibfQueryBuilder.templateParameters();
+
+        List<OracleColumnInfo> columns = (List<OracleColumnInfo>) templateParameters.get("columns");
+        assertEquals(2, columns.size());
+    }
+
+    @Test
+    public void queryBuilder_templateParametersTransitionIbf() {
+        TableRef tableRef = getDefaultTestTable();
+
+        OracleIBFQueryBuilder ibfQueryBuilder =
+                queryBuilder(tableRef, SyncMode.Legacy, OracleibfTestUtil::columnsForIbfReplacementTest)
+                        .setCellCount(300)
+                        .setIbfType(OracleIBFQueryBuilder.IBFType.REPLACEMENT);
+
+        setModifiedColumns(tableRef, "COL2");
+
+        Map<String, Object> templateParameters = ibfQueryBuilder.templateParameters();
+
+        List<OracleColumnInfo> columns = (List<OracleColumnInfo>) templateParameters.get("columns");
+        assertEquals(3, columns.size());
+
+        List<OracleColumnInfo> originalColumns = ibfQueryBuilder.getColumnsWithoutModifiedColumns();
+        assertEquals(2, originalColumns.size());
+
+        assertEquals(250, OracleIBFQueryBuilder.computeKeyLengthBinary(1000));
+    }
+
+    @Test
+    public void testBitXorSqlStatements() {
+        OracleIBFQueryBuilder ibfQueryBuilder =
+                queryBuilder(getDefaultTestTable(), SyncMode.Legacy, OracleibfTestUtil::columnsForTestTable1);
+
+        assertEquals(1, ibfQueryBuilder.getKeyLengths().size());
+
+        assertNotNull(ibfQueryBuilder.getCreateBitXorTypeStatement());
+
+        assertNotNull(ibfQueryBuilder.getCreateBitXorBodyStatement());
+
+        assertNotNull(ibfQueryBuilder.getCreateBitXorFunctionStatement());
+    }
+
+    @Test
+    public void testTemplateHelper() {
+        TableRef tableRef = getDefaultTestTable();
+        OracleIBFQueryBuilder ibfQueryBuilder =
+                queryBuilder(tableRef, SyncMode.Legacy, OracleibfTestUtil::columnsForAllDatatypes);
+
+        Map<String, Object> templateParameters = ibfQueryBuilder.templateParameters();
+        OracleibfTableInfo tableInfo = getOracleibfTableInfo(tableRef);
+
+        OracleIBFQueryBuilder.TemplateHelper helper =
+                (OracleIBFQueryBuilder.TemplateHelper) templateParameters.get("helper");
+
+        Map<String, OracleColumnInfo> columns =
+                tableInfo
+                        .getOracleTableInfo()
+                        .getIncomingColumns()
+                        .stream()
+                        .collect(Collectors.toMap(OracleColumnInfo::getName, columnInfo -> columnInfo));
+
+        assertTrue(helper.isBinary(columns.get("RAW_COL")));
+        assertTrue(helper.isDateTime(columns.get("TIMESTAMP_COL")));
+        assertTrue(helper.isNumber(columns.get("ID")));
+        assertTrue(helper.isString(columns.get("VARCHAR2_COL")));
+        assertTrue(helper.isUnicode(columns.get("NVARCHAR2_COL")));
+    }
+
+    private OracleTableInfo newOracleTableInfo(TableRef tableRef, SyncMode syncMode, List<OracleColumn> columns) {
+        Map<TableRef, List<OracleColumn>> selectedTables = new HashMap<>();
+        selectedTables.put(tableRef, columns);
+
+        testContext.standardConfig(mockStandardConfig(tableRef, SyncMode.Legacy));
+        testContext.getOracleibfContext().setSelectedTables(selectedTables);
+
+        return new OracleTableInfoContext(
+                        newOracleTableMetricsProvider(),
+                        testContext.getOracleState(),
+                        mockStandardConfig(tableRef, syncMode),
+                        selectedTables)
+                .getOracleTableInfo(tableRef);
+    }
+
+    private TableRef getDefaultTestTable() {
+        return new TableRef("default_schema", "default_table");
+    }
+
+    private OracleIBFQueryBuilder queryBuilder(
+            TableRef tableRef, SyncMode syncMode, Function<TableRef, List<OracleColumn>> columnF) {
+        return testContext
+                .getOracleibfContext()
+                .getOracleIBFQueryBuilder(newOracleTableInfo(tableRef, syncMode, columnF.apply(tableRef)));
+    }
+
+    private OracleibfTableInfo getOracleibfTableInfo(TableRef tableRef) {
+        return testContext.getOracleibfContext().getOracleibfTableInfo(tableRef);
+    }
+
+    private void setModifiedColumns(TableRef tableRef, String... colNames) {
+        OracleibfTableInfo tableInfo = getOracleibfTableInfo(tableRef);
+
+        Map<String, ibfColumnInfo> modified = new HashMap<>();
+        for (String colName : colNames) {
+            modified.put(colName, tableInfo.getibfTableInfo().columns.get(colName));
+        }
+
+        tableInfo.setModifiedColumns(modified);
+    }
+
+    private void mockOracleDbVersion(Connection mockConnection) throws SQLException {
+        Statement mockStatement = mock(Statement.class);
+        when(mockConnection.createStatement()).thenReturn(mockStatement);
+
+        doReturn(
+                        new MockResultSetBuilder.SelfRewindingMockResultSet(
+                                Arrays.asList(
+                                        Collections.singletonMap(
+                                                "banner",
+                                                "Oracle Database 19c Standard Edition 2 Release 19.0.0.0.0 - Production"))))
+                .when(mockStatement)
+                .executeQuery(matches("SELECT banner FROM v\\$version WHERE banner LIKE 'Oracle%'"));
+    }
+}
