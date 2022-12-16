@@ -24,7 +24,7 @@ public class VelocityUtils {
         hashMap.put("dataTableName",tableName);
         hashMap.put("columnNames",columnNames);
         hashMap.put("helper", new OracleIBFQueryBuilder.TemplateHelper());
-        hashMap.put("dateNumberFormat","DD-MM-YYY");
+        hashMap.put("dateNumberFormat","DD-MM-YYYY");
         hashMap.put("output", "#" + outputFunction + "()");
 
         return VelocityUtils.generate(templateFilename, hashMap);
