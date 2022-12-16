@@ -11,7 +11,7 @@ import lombok.*;
 public class DataTable {
     private long rowHashNumber;
     private String stringColumn;
-    private Long numberColumn;
+    private String numberColumn;
     private String  dateColumn;
     private String clobColumn;
 

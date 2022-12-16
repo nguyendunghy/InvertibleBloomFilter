@@ -80,7 +80,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 new DataTable(
                         rs.getLong("ROW_HASH_NUMBER"),
                         rs.getString("STRING_COLUMN"),
-                        rs.getLong("NUMBER_COLUMN"),
+                        rs.getString("NUMBER_COLUMN"),
                         rs.getString("DATE_COLUMN"),
                         rs.getString("CLOB_COLUMN")
                 ));
@@ -105,7 +105,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 new DataTable(
                         rs.getLong("ROW_HASH_NUMBER"),
                         rs.getString("STRING_COLUMN"),
-                        rs.getLong("NUMBER_COLUMN"),
+                        rs.getString("NUMBER_COLUMN"),
                         rs.getString("DATE_COLUMN"),
                         rs.getString("CLOB_COLUMN")
                 ));
