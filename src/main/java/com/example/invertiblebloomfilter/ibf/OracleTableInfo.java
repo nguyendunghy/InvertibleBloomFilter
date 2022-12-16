@@ -43,13 +43,13 @@ public class OracleTableInfo {
             incomingColumnsIndexed.put(columnInfo.getName(), columnInfo);
         }
 
-        this.primaryKeys =
-                incomingColumns
-                        .stream()
-                        .filter(c -> c.isPrimaryKey())
-                        .sorted(Comparator.comparing(OracleColumnInfo::getName))
-                        .collect(Collectors.toList());
-
+//        this.primaryKeys =
+//                incomingColumns
+//                        .stream()
+//                        .filter(c -> c.isPrimaryKey())
+//                        .sorted(Comparator.comparing(OracleColumnInfo::getName))
+//                        .collect(Collectors.toList());
+        this.primaryKeys = columns;
         this.tableMetricsProvider = tableMetricsProvider;
 
         this.columns =
