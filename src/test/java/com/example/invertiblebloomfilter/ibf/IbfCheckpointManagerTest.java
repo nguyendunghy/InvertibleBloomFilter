@@ -13,13 +13,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static com.example.invertiblebloomfilter.utils.DataSourceUtils.createDataSource;
+import static com.example.invertiblebloomfilter.utils.DataSourceUtils.buildDataSource;
 
 public class IbfCheckpointManagerTest {
 
-    private String url = "jdbc:oracle:thin:@localhost:49161:XE";
-    private String username = "john";
-    private String password = "abcd1234";
     private final Duration CHECKPOINT_PERIOD = Duration.ofMinutes(15);
 
     @Test
@@ -67,7 +64,7 @@ public class IbfCheckpointManagerTest {
     }
 
     private OracleIbfAdapter buildOracleIbfAdapter() {
-        DataSource dataSource = createDataSource(url, username, password);
+        DataSource dataSource = buildDataSource();
 
         TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
         StandardConfig standardConfig = StandardConfig.createModifiable("JOHN", Arrays.asList("IBF_DATA"));
