@@ -111,5 +111,17 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 ));
     }
 
+    @Override
+    public void save(DataTable dataTable) {
+        jdbcTemplate.update(SAVE_IBF_DATA,
+                dataTable.getStringColumn(), dataTable.getNumberColumn(), dataTable.getDateColumn(), dataTable.getClobColumn());
+    }
+
+    @Override
+    public void delete(DataTable dataTable) {
+        jdbcTemplate.update(DELETE_IBF_DATA,
+                dataTable.getStringColumn(), dataTable.getNumberColumn(), dataTable.getDateColumn(), dataTable.getClobColumn());
+    }
+
 }
 

@@ -1,69 +1,160 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.example.invertiblebloomfilter.entity.DataTable;
+import com.example.invertiblebloomfilter.repo.IbfDataRepo;
+import com.example.invertiblebloomfilter.repo.Sql;
+import com.example.invertiblebloomfilter.repo.impl.IbfDataRepoImpl;
+import com.example.invertiblebloomfilter.utils.DataSourceUtils;
 import com.example.invertiblebloomfilter.utils.FileUtils;
+import com.example.invertiblebloomfilter.utils.JdbcTemplateUtils;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
+import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.jupiter.api.Test;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
+import org.springframework.boot.autoconfigure.jdbc.JdbcProperties;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.crypto.SecretKey;
 import javax.sql.DataSource;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-
+import java.util.*;
 import static com.example.invertiblebloomfilter.utils.DataSourceUtils.buildDataSource;
 
+@Log4j2
+@RunWith(JUnit4.class)
 public class IbfCheckpointManagerTest {
 
-    private final Duration CHECKPOINT_PERIOD = Duration.ofMinutes(15);
+    private static final Duration CHECKPOINT_PERIOD = Duration.ofMinutes(15);
+    //Local file name
+    private static final String OBJECT_ID = "165c56bd-d573-4bc2-9cc9-e36d3ed82fd5";
+    private static final String IBF_LOCAL_DIR = "IbfLocal";
+
+
+    @BeforeClass
+    public static void initTest() {
+        genIbfSyncResultAndUpdateLocalFile();
+    }
+
+    @AfterClass
+    public static void afterTest() {
+        try {
+            DataSourceUtils.buildDataSource().getConnection().close();
+        } catch (Exception e) {
+            log.error("error",e);
+        }
+    }
+    @Test
+    public void testUpsert() {
+        String stringColumn = RandomStringUtils.randomAlphabetic(3).toUpperCase();
+        String numberColumn = RandomUtils.nextLong(1,1000000) + "";
+        String date = RandomUtils.nextInt(10, 30) + "-" + RandomUtils.nextInt(10, 12) + "-" + RandomUtils.nextInt(2000, 2023);
+        String clobColumn = RandomStringUtils.randomAlphabetic(5).toUpperCase();
+
+        insertRecord(stringColumn, numberColumn, date, clobColumn);
+        IbfSyncResult ibfSyncResult = genIbfSyncResultAndUpdateLocalFile();
+
+        List<List<DataTable>> lists = ibfSyncResult.upserts();
+        log.info("UPSERT record: " + lists);
+
+        Assert.assertEquals(stringColumn, lists.get(0).get(0).getStringColumn());
+        Assert.assertEquals(numberColumn, lists.get(0).get(0).getNumberColumn());
+        Assert.assertEquals(date, lists.get(0).get(0).getDateColumn());
+        Assert.assertEquals(clobColumn, lists.get(0).get(0).getClobColumn());
+
+    }
 
     @Test
-    void testDiff() {
+    public void testDelete() {
+        String stringColumn = RandomStringUtils.randomAlphabetic(3).toUpperCase();
+        String numberColumn = RandomUtils.nextLong(1,1000000) + "";
+        String date = RandomUtils.nextInt(10, 30) + "-" + RandomUtils.nextInt(10, 12) + "-" + RandomUtils.nextInt(2000, 2023);
+        String clobColumn = RandomStringUtils.randomAlphabetic(5).toUpperCase();
+
+        insertRecord(stringColumn, numberColumn, date, clobColumn);
+        genIbfSyncResultAndUpdateLocalFile();
+
+        createIbfDataHistory();
+
+        deleteRecord(stringColumn, numberColumn, date, clobColumn);
+
+        IbfSyncResult ibfSyncResult = genIbfSyncResultAndUpdateLocalFile();
+        List<List<DataTable>> lists = new ArrayList<>(ibfSyncResult.deletes()) ;
+        log.info("DELETE record: " + lists);
+
+        Assert.assertEquals(stringColumn, lists.get(0).get(0).getStringColumn());
+        Assert.assertEquals(numberColumn, lists.get(0).get(0).getNumberColumn());
+        Assert.assertEquals(date, lists.get(0).get(0).getDateColumn());
+        Assert.assertEquals(clobColumn, lists.get(0).get(0).getClobColumn());
+    }
+
+
+    private static IbfSyncResult genIbfSyncResultAndUpdateLocalFile() {
         try {
             OracleIbfAdapter oracleIbfAdapter = buildOracleIbfAdapter();
-
             IbfPersistentStorage ibfPersistentStorage = buildIbfPersistentStorage();
+            IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(oracleIbfAdapter, ibfPersistentStorage, OBJECT_ID);
 
-            String objectId = "165c56bd-d573-4bc2-9cc9-e36d3ed82fd5";
-
-            IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(oracleIbfAdapter, ibfPersistentStorage, objectId);
-
-            if (!checkLocalStorageFileHaveData("IbfLocal/165c56bd-d573-4bc2-9cc9-e36d3ed82fd5")) {
+            if (!checkLocalStorageFileHaveData(IBF_LOCAL_DIR + "/" + OBJECT_ID)) {
                 ibfCheckpointManager.simulateResetWithEmptyIBF();
             }
-
             IbfSyncResult ibfSyncResult = ibfCheckpointManager.diff();
-
             ibfCheckpointManager.update();
-
-            System.out.println("UPSERT :" + ibfSyncResult.upserts());
-            System.out.println("DELETE :" + ibfSyncResult.deletes());
-
-            ibfCheckpointManager.update();
-
-            Assert.assertTrue(true);
+            return ibfSyncResult;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            Assert.assertTrue(false);
+            log.error("error", ex);
         }
+        return null;
+    }
+
+    private void deleteRecord(String stringCol, String numberCol, String dateCol, String clobCol) {
+        log.info("DELETED RECORD: " + stringCol + "|" + numberCol + "|" + dateCol + "|" + clobCol);
+        JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(DataSourceUtils.buildDataSource(), new JdbcProperties());
+        IbfDataRepo ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
+        ibfDataRepo.delete(DataTable.builder()
+                .stringColumn(stringCol).numberColumn(numberCol)
+                .dateColumn(dateCol).clobColumn(clobCol)
+                .build()
+        );
+    }
+    private void insertRecord(String stringCol, String numberCol, String dateCol, String clobCol) {
+        log.info("INSERTED RECORD: " + stringCol + "|" + numberCol + "|" + dateCol + "|" + clobCol);
+        JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(DataSourceUtils.buildDataSource(), new JdbcProperties());
+        IbfDataRepo ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
+        ibfDataRepo.save(DataTable.builder().stringColumn(stringCol).numberColumn(numberCol).dateColumn(dateCol).clobColumn(clobCol).build());
+    }
+
+    private void createIbfDataHistory(){
+        JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(DataSourceUtils.buildDataSource(), new JdbcProperties());
+        try {
+            jdbcTemplate.update(Sql.DROP_IBF_DATA_HISTORY);
+        }catch (Exception ex){
+            log.error("error ", ex);
+        }
+
+        jdbcTemplate.update(Sql.CREATE_IBF_DATA_HISTORY);
 
 
     }
 
-    private boolean checkLocalStorageFileHaveData(String filePath) {
+    private static boolean checkLocalStorageFileHaveData(String filePath) {
         try {
             String fileContent = FileUtils.readFile(filePath);
             new IbfSyncData(fileContent);
             return true;
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("error", ex);
         }
         return false;
     }
 
-    private OracleIbfAdapter buildOracleIbfAdapter() {
+    private static OracleIbfAdapter buildOracleIbfAdapter() {
         DataSource dataSource = buildDataSource();
 
         TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
@@ -83,7 +174,7 @@ public class IbfCheckpointManagerTest {
         return oracleIbfAdapter;
     }
 
-    private List<OracleColumnInfo> buildColumns(TableRef tableRef) {
+    private static List<OracleColumnInfo> buildColumns(TableRef tableRef) {
 
         Column stringColumn = new Column("STRING_COLUMN", DataType.String, true);
         Column numberColumn = new Column("NUMBER_COLUMN", DataType.Long, true);
@@ -108,10 +199,10 @@ public class IbfCheckpointManagerTest {
 
     }
 
-    private IbfPersistentStorage buildIbfPersistentStorage() {
-        File file = new File("IbfLocal");
+    private static IbfPersistentStorage buildIbfPersistentStorage() {
+        File file = new File(IBF_LOCAL_DIR);
         Path path = file.toPath();
-        System.out.println("Using local ibf storage location " + path);
+        log.info("Using local ibf storage location " + path);
         LocalDiskStorageAddressSpecification localDiskStorageAddressSpecification = new LocalDiskStorageAddressSpecification(path);
         LocalDiskIbfStorageClient localDiskIbfStorageClient = new LocalDiskIbfStorageClient(localDiskStorageAddressSpecification);
         SecretKey secretKey = Encrypt.newDataEncryptionKey();

@@ -8,6 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
+@Builder
 public class DataTable {
     private long rowHashNumber;
     private String stringColumn;
