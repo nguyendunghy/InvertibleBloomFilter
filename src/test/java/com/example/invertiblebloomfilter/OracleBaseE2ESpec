@@ -1,0 +1,598 @@
+package com.example.integrations.oracle.e2e;
+
+import static com.example.fire.shared.utils.FireTestUtils.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
+import com.example.core.SyncMode;
+import com.example.fire.blueprints.database.DockerDBBlueprint;
+import com.example.fire.blueprints.database.DockerDBBlueprintMenu;
+import com.example.fire.data.database.*;
+import com.example.fire.data.database.DataTranslator;
+import com.example.fire.data.database.datatypes.FireIntermediateDataType;
+import com.example.fire.e2e.*;
+import com.example.fire.e2e.database.Ephemeral3DB;
+import com.example.fire.e2e.database.sources.OracleFireSource;
+import com.example.fire.scaffolding.ExampleFireDestination;
+import com.example.fire.scaffolding.ExampleFireSource;
+import com.example.fire.scaffolding.SQLStatementFactory;
+import com.example.fire.shared.ColumnMaskType;
+import com.example.fire.shared.utils.FireTestUtils;
+import com.example.flag.FlagName;
+import com.example.integrations.oracle.OracleCredentials;
+import com.example.metal.shared.MetalUtils;
+import java.sql.SQLException;
+import java.util.*;
+import org.assertj.core.api.SoftAssertions;
+import org.junit.Before;
+import org.junit.Rule;
+
+public abstract class OracleBaseE2ESpec {
+    protected E2EScenario scenario;
+    protected Ephemeral3DB context;
+    protected EphemeralSchema ephemeralSchema;
+    protected EphemeralTable ephemeralTable;
+    protected ExampleIntegration integration;
+    protected ExampleProductionDatabase prod;
+    protected OracleStatementFactory.TableTypes tableType = OracleStatementFactory.TableTypes.HEAP_ORGANIZED_TABLE;
+
+    @Rule public E2ETestWatcher rule = new E2ETestWatcher(this);
+
+    /** Override and implement as needed */
+    protected void doBeforeEachTest() {}
+
+    protected abstract DockerDBBlueprint getSourceBlueprint();
+
+    protected DockerDBBlueprint getDestBlueprint() {
+        return DockerDBBlueprintMenu.postgres122v001();
+    }
+
+    protected DockerDBBlueprint getProdBlueprint() {
+        return DockerDBBlueprintMenu.postgres122v001();
+    }
+
+    @Before
+    public final void beforeEachTest() {
+        doBeforeEachTest();
+
+        MetalUtils.resetStaticMetalUtilsRandomSeed(314159265);
+        DockerDBBlueprint sourceBP = getSourceBlueprint();
+        DockerDBBlueprint destBP = getDestBlueprint();
+        DockerDBBlueprint prodBP = getProdBlueprint();
+        context = new Ephemeral3DB(sourceBP, destBP, prodBP);
+        buildScenario();
+        enableFlagsInConfigService(getConfigServiceFlags());
+    }
+
+    protected abstract List<String> getConfigServiceFlags();
+
+    protected abstract void doSync() throws SQLException;
+
+    protected abstract void doSyncWithoutStatusCheck() throws SQLException;
+
+    protected abstract void doSyncWithRescheduled() throws SQLException;
+
+    private final void buildScenario() {
+        Map<String, Object> sourceAndDestination =
+                inferSourceAndDestination(context.getSource().getResource(), context.getDest().getResource());
+        prod = new ExampleProductionDatabase(context.getProd().getResource());
+        scenario =
+                new E2EScenario(
+                        (ExampleFireSource) sourceAndDestination.get(SOURCE_CONSTANT),
+                        (ExampleFireDestination) sourceAndDestination.get(DESTINATION_CONSTANT),
+                        prod);
+        integration = FireTestUtils.setUpIntegrationAndUser(scenario);
+    }
+
+    protected void enableFlagsInConfigService(List<String> flags) {
+        for (String flag : flags) {
+            scenario.getProdDB().ensureFlagEnabled(flag, integration);
+        }
+    }
+
+    protected final void setTableSyncMode(SyncMode mode, FullyQualifiedTableName tableName) {
+        scenario.getProdDB().setSyncMode(integration, tableName, mode);
+    }
+
+    protected final void testAllDataTypes(SyncMode syncMode, Boolean updateCounter) throws SQLException {
+        testAllDataTypes(syncMode, updateCounter, tableType.name());
+    }
+
+    protected final void testAllDataTypes(SyncMode syncMode, Boolean updateCounter, String tableType)
+            throws SQLException {
+        // arrange
+        SQLResource source = context.getSource().getResource();
+        // many table types doesn't support LONG, so to keep things simple, we test LONG only with heap organized tables
+        Set<FireIntermediateDataType> exclusions =
+                tableType.equals("HEAP_ORGANIZED_TABLE") ? Set.of() : Set.of(FireIntermediateDataType.ORACLE_LONG);
+        ephemeralSchema =
+                createSchemaWithAllSupportedDataTypes(source.getDialect(), MetalUtils.random8upper(), exclusions);
+        ephemeralSchema.getTables().forEach(t -> t.setTableType(tableType));
+        source.createDataset(ephemeralSchema);
+        setAllTablesSyncMode(syncMode);
+        doSync();
+
+        // act
+        ephemeralSchema.generateDeletes(2).accept(source);
+        ephemeralSchema.generateUpdates(2, updateCounter).accept(source);
+        ephemeralSchema.generateAdds(2).accept(source);
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void setAllTablesSyncMode(SyncMode mode) {
+        for (EphemeralTable table : ephemeralSchema.getTables()) {
+            scenario.getProdDB().setSyncMode(integration, table.getFullyQualifiedTableName(), mode);
+        }
+    }
+
+    protected final void createSchemaWithTablePopulated(FireIntermediateDataType dataType) {
+        // many table types doesn't support LONG, so to keep things simple, we test LONG only with heap organized tables
+        Set<FireIntermediateDataType> exclusions =
+                tableType == OracleStatementFactory.TableTypes.HEAP_ORGANIZED_TABLE
+                        ? Set.of()
+                        : Set.of(FireIntermediateDataType.ORACLE_LONG);
+        ephemeralSchema =
+                createSchemaWithAllSupportedDataTypes(
+                        context.getSource().getResource().getDialect(), MetalUtils.random8upper(), exclusions);
+        ephemeralTable = ephemeralSchema.getTable(dataType + "_table");
+        ephemeralSchema.getTables().forEach(t -> t.setTableType(tableType.name()));
+    }
+
+    protected final EphemeralTable createPopulatedTable(
+            FireIntermediateDataType dataType, int numPKeys, String tableAppendName) {
+        EphemeralTable table = ephemeralSchema.createPopulatedTable(context, dataType, numPKeys, tableAppendName);
+        ephemeralSchema.getTables().forEach(t -> t.setTableType(tableType.name()));
+        return table;
+    }
+
+    protected final EphemeralTable createPopulatedTable(FireIntermediateDataType dataType, int numPKeys) {
+        EphemeralTable table = ephemeralSchema.createPopulatedTable(context, dataType, numPKeys);
+        ephemeralSchema.getTables().forEach(t -> t.setTableType(tableType.name()));
+        return table;
+    }
+
+    protected final void testCompositeKey(SyncMode syncMode) throws SQLException {
+        // arrange
+        SQLResource source = context.getSource().getResource();
+        FireIntermediateDataType dataType = FireIntermediateDataType.VARCHAR;
+        createSchemaWithTablePopulated(dataType);
+
+        // act
+        createPopulatedTable(dataType, 2, dataType + "_Composite_Table");
+        source.createDataset(ephemeralSchema);
+        setAllTablesSyncMode(syncMode);
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+
+        // act
+        ephemeralSchema.generateAdds(2).accept(source);
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void testDropTable(SyncMode syncMode) throws SQLException {
+        // arrange
+        SQLResource source = context.getSource().getResource();
+        ephemeralSchema = EphemeralSchema.builder().withSchemaName(MetalUtils.random8upper()).build();
+        ephemeralTable = createPopulatedTable(FireIntermediateDataType.VARCHAR, 1);
+        EphemeralTable tableToDrop = createPopulatedTable(FireIntermediateDataType.CHAR, 1);
+        source.createDataset(ephemeralSchema);
+        setAllTablesSyncMode(syncMode);
+        doSync();
+
+        // act
+        ephemeralSchema.dropTable(tableToDrop.getRawTableName());
+        source.applyDropTable(tableToDrop);
+        ephemeralSchema.generateDeletes(1).accept(source);
+        ephemeralSchema.generateUpdates(1, syncMode == SyncMode.History).accept(source);
+        ephemeralSchema.generateAdds(1).accept(source);
+        doSync();
+
+        // assert
+        assertFalse(
+                "The table to drop exists in the source schema",
+                source.tableExists(tableToDrop.getFullyQualifiedTableName()));
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void testIncrementalUpdateEmptyTableNoChanges(SyncMode syncMode) throws SQLException {
+        // arrange
+        FireIntermediateDataType dataType = FireIntermediateDataType.VARCHAR;
+        createSchemaWithTablePopulated(dataType);
+
+        // act
+        EphemeralTable table2 = createTable(ephemeralSchema, FireIntermediateDataType.CHAR, 0, "empty_table");
+        ephemeralSchema.addTable(table2);
+        context.getSource().getResource().createDataset(ephemeralSchema);
+        setAllTablesSyncMode(syncMode);
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+
+        // act
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void testMaskColumn(SyncMode syncMode, ColumnMaskType mask) throws SQLException {
+        // arrange
+        int numRowsToAdd = 2;
+        SoftAssertions softAssertions = new SoftAssertions();
+        SQLResource source = context.getSource().getResource();
+        ephemeralSchema = EphemeralSchema.builder().withSchemaName(MetalUtils.random8upper()).build();
+        createPopulatedTable(FireIntermediateDataType.VARCHAR, 1);
+        EphemeralTable table = ephemeralSchema.getTables().get(0);
+        source.createDataset(ephemeralSchema);
+        setAllTablesSyncMode(syncMode);
+        doSync();
+
+        // act
+        // masked column and new rows added
+        String tableName = table.getRawTableName();
+        EphemeralColumn column = table.getRandomNonPKeyColumn();
+        String columnName = column.getColumnName();
+        prod.maskColumn(integration, ephemeralSchema, tableName, column, mask);
+        ephemeralSchema.generateAdds(numRowsToAdd).accept(source);
+        doSync();
+
+        // assert
+        DataTranslator translator = new DataTranslator(integration);
+        List<Map<String, Object>> sourceAllRows = translator.getSourceRows(table);
+        List<Map<String, Object>> destAllRows = translator.getDestinationRows(table);
+
+        // oracle doesn't guarantee that order of insertion is order in memory, so we sort on the index column for
+        // assertions below
+        sourceAllRows.sort((Comparator.comparing(o -> (int) o.get("int_index_0"))));
+
+        // verify the row counts as per the sync syncMode
+        softAssertions.assertAlso(
+                scenario.getDestination()
+                        .assertRowCountsForSyncMode(scenario.getSource(), table, destAllRows, syncMode));
+
+        // remove the blocked column along with the other example added columns and validate data in rows
+        softAssertions.assertAlso(
+                assertDataForNonBlockedColumns(integration, table, columnName, sourceAllRows, destAllRows));
+
+        // assert the blocked column in newly added rows has null values
+        softAssertions.assertAlso(
+                assertDataForMaskedColumn(numRowsToAdd, columnName, sourceAllRows, destAllRows, mask));
+        softAssertions.assertAll();
+
+        // unmask column
+        prod.unmaskColumn(integration, ephemeralSchema, tableName, column, mask);
+        ephemeralSchema.generateAdds(numRowsToAdd).accept(source);
+
+        // incremental sync
+        doSync();
+
+        // assert - new rows should appear, previously blocked data shouldn't unless resynced
+        DataTranslator dataTranslator = new DataTranslator(integration);
+        List<Map<String, Object>> sourceRows = dataTranslator.getSourceRows(table);
+        List<Map<String, Object>> destinationRows = dataTranslator.getDestinationRows(table);
+        SoftAssertions assertions = new SoftAssertions();
+
+        // oracle doesn't guarantee that order of insertion is order in memory, so we sort on the index column for
+        // assertions below
+        sourceRows.sort((Comparator.comparing(o -> (int) o.get("int_index_0"))));
+
+        // verify the row counts as per the syncMode
+        assertions.assertAlso(
+                scenario.getDestination()
+                        .assertRowCountsForSyncMode(scenario.getSource(), table, destinationRows, syncMode));
+
+        // remove the blocked column along with the other example added columns and validate data in rows
+        assertions.assertAlso(
+                assertDataForNonBlockedColumns(integration, table, columnName, sourceRows, destinationRows));
+
+        // assert new rows in un-masked column are correct
+        assertions.assertAlso(assertDataForMaskedColumn(numRowsToAdd, columnName, sourceRows, destinationRows, null));
+        assertions.assertAll();
+
+        // act - re-sync table and destination should all data including formerly masked values
+        prod.resyncTables(
+                integration,
+                scenario.getServiceRegistry(),
+                Map.of(ephemeralSchema.getSchemaName(), Set.of(table.getRawTableName())));
+        doSync();
+
+        // assert
+        if (syncMode == SyncMode.History) table.updateResyncedRowsForHistoryMode();
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void testRenameTable(SyncMode syncMode) throws SQLException {
+        // arrange
+        FireIntermediateDataType dataType = FireIntermediateDataType.VARCHAR;
+        SQLResource source = context.getSource().getResource();
+        createSchemaWithTablePopulated(dataType);
+
+        source.createDataset(ephemeralSchema);
+        setAllTablesSyncMode(syncMode);
+
+        doSync();
+
+        // act
+        FullyQualifiedTableName fqTableName = ephemeralTable.getFullyQualifiedTableName();
+        String newTableName = dataType + "_renamed";
+        ephemeralSchema.renameTable(fqTableName.table(), newTableName);
+        source.applyRenameTable(fqTableName, newTableName);
+
+        // assert
+        scenario.getProdDB().setSyncMode(integration, ephemeralTable.getFullyQualifiedTableName(), syncMode);
+        doSync();
+
+        // act
+        ephemeralSchema.generateDeletes(1).accept(source);
+        ephemeralSchema.generateUpdates(1, syncMode == SyncMode.History).accept(source);
+        ephemeralSchema.generateAdds(1).accept(source);
+        doSync();
+
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void testTruncateTable(SyncMode syncMode) throws SQLException {
+        // arrange
+        SoftAssertions softAssertions = new SoftAssertions();
+        SQLResource source = context.getSource().getResource();
+        FireIntermediateDataType dataType = FireIntermediateDataType.VARCHAR;
+        createSchemaWithTablePopulated(dataType);
+        source.createDataset(ephemeralSchema);
+        setAllTablesSyncMode(syncMode);
+        doSync();
+
+        // act
+        FullyQualifiedTableName tableName = ephemeralTable.getFullyQualifiedTableName();
+        DataTranslator translator = new DataTranslator(integration);
+        List<Map<String, Object>> destAllRows = translator.getDestinationRows(ephemeralTable);
+        source.applyTruncateTable(tableName);
+        doSync();
+
+        // assert
+        softAssertions.assertAlso(
+                scenario.getDestination()
+                        .assertRowCountsForSyncMode(scenario.getSource(), ephemeralTable, destAllRows, syncMode));
+        softAssertions.assertAll();
+
+        // act
+        // Insert a new row and do incremental update
+        ephemeralSchema.generateAdds(1).accept(source);
+        doSync();
+
+        // assert
+        List<Map<String, Object>> destAllRowsNew = translator.getDestinationRows(ephemeralTable);
+        assertEquals(
+                "No data is removed from the destination and new data is present",
+                destAllRowsNew.size(),
+                (destAllRows.size() + 1));
+    }
+
+    protected final void testAddTable(SyncMode syncMode) throws SQLException {
+        // arrange
+        FireIntermediateDataType dataType = FireIntermediateDataType.VARCHAR;
+        SQLResource source = context.getSource().getResource();
+        createSchemaWithTablePopulated(dataType);
+        source.createDataset(ephemeralSchema);
+        setAllTablesSyncMode(syncMode);
+        doSync();
+
+        // act
+        FireIntermediateDataType newDataType = FireIntermediateDataType.CHAR;
+        EphemeralTable tableToAdd = createPopulatedTable(newDataType, 1, "oracle_" + newDataType + "_table");
+        source.applyAddTable(tableToAdd);
+        setTableSyncMode(syncMode, tableToAdd.getFullyQualifiedTableName());
+        // This test can be flaky. The first sync can finish with READY or RESCHEDULED with OracleLogMiner.
+        // The only way to guarantee this test to be successful is run doSync() once again after this.
+        doSyncWithoutStatusCheck();
+        doSync();
+
+        // donkey logs indicate sync was RESCHEDULED and then table is resynced for LogMiner
+        if (syncMode == SyncMode.History && OracleFireSource.updateMethod == OracleCredentials.UpdateMethod.LOGMINER)
+            tableToAdd.updateResyncedRowsForHistoryMode();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+
+        // act
+        ephemeralSchema.generateDeletes(1).accept(source);
+        ephemeralSchema.generateUpdates(1, syncMode == SyncMode.History).accept(source);
+        ephemeralSchema.generateAdds(1).accept(source);
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void testRenameColumn(SyncMode syncMode) throws SQLException {
+        // arrange
+        FireIntermediateDataType dataType = FireIntermediateDataType.VARCHAR;
+        SQLResource source = context.getSource().getResource();
+        createSchemaWithTablePopulated(dataType);
+        source.createDataset(ephemeralSchema);
+        setAllTablesSyncMode(syncMode);
+        doSync();
+
+        // act
+        String oldColumnName = ephemeralTable.getColumns().get(1).getColumnName();
+        String newColumnName = dataType.toString().toLowerCase() + "_renamed";
+        ephemeralTable.renameColumn(oldColumnName, newColumnName);
+        source.applyRenameColumn(ephemeralTable, oldColumnName, newColumnName);
+
+        /*
+           Oracle requires a 2 step re-sync for DDL changes to an already imported table
+           First sync detects re-sync required and resets the cursor in ProdDB
+           Second sync imports the data
+        */
+        // We return Rescheduled when a table resync is scheduled.
+        doSyncWithRescheduled();
+        doSync();
+
+        // Re-sync adds the same source rows in destination so we update rows for history mode in the EphemeralTable to
+        // maintain metadata state
+        if (syncMode == SyncMode.History) ephemeralTable.updateResyncedRowsForHistoryMode();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+
+        // act
+        ephemeralSchema.generateDeletes(1).accept(source);
+        ephemeralSchema.generateUpdates(1, syncMode == SyncMode.History).accept(source);
+        ephemeralSchema.generateAdds(1).accept(source);
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void testAddDropColumn(SyncMode syncMode, Boolean updateCounter) throws SQLException {
+        // arrange
+        FireIntermediateDataType dataType = FireIntermediateDataType.VARCHAR;
+        SQLResource source = context.getSource().getResource();
+        ephemeralSchema = EphemeralSchema.builder().withSchemaName(MetalUtils.random8upper()).build();
+        ephemeralTable = createPopulatedTable(dataType, 1);
+        source.createDataset(ephemeralSchema);
+        setAllTablesSyncMode(syncMode);
+        doSync();
+
+        // act
+        ephemeralSchema.generateColumns(1, FireIntermediateDataType.CHAR, updateCounter).accept(source);
+
+        doSync();
+
+        // Re-sync adds the same source rows in destination so we update rows for history mode in the EphemeralTable to
+        // maintain metadata state
+        if (syncMode == SyncMode.History) ephemeralTable.updateResyncedRowsForHistoryMode();
+
+        // update existing rows with new data
+        ephemeralSchema.generateDeletes(1).accept(source);
+        ephemeralSchema.generateUpdates(1, updateCounter).accept(source);
+        ephemeralSchema.generateAdds(1).accept(source);
+        doSync();
+
+        EphemeralColumn columnToDrop = ephemeralTable.getColumnByIndex(ephemeralTable.getColumns().size() - 1);
+        ephemeralTable.deleteDroppedColData(ephemeralTable.indexOfColumn(columnToDrop.getColumnName()));
+        ephemeralTable.dropColumn(columnToDrop);
+        source.applyDropColumn(ephemeralTable, columnToDrop);
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+
+        // act
+        ephemeralSchema.generateDeletes(1).accept(source);
+        ephemeralSchema.generateUpdates(1, updateCounter).accept(source);
+        ephemeralSchema.generateAdds(1).accept(source);
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void testMigrationLegacyToHistory() throws SQLException {
+        // arrange
+        FireIntermediateDataType dataType = FireIntermediateDataType.VARCHAR;
+        createSchemaWithTablePopulated(dataType);
+        context.getSource().getResource().createDataset(ephemeralSchema);
+        enableFlagsInConfigService(Collections.singletonList(FlagName.SyncModes.name()));
+        FullyQualifiedTableName tableName = ephemeralTable.getFullyQualifiedTableName();
+        setTableSyncMode(SyncMode.Legacy, tableName);
+        doSync();
+
+        // act
+        setTableSyncMode(SyncMode.History, tableName); // sync mode changes
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void changeColumnDatatype(boolean shouldReschedule) throws SQLException {
+        // arrange
+        FireIntermediateDataType dataType = FireIntermediateDataType.CHAR;
+        SQLResource source = context.getSource().getResource();
+        createSchemaWithTablePopulated(dataType);
+        source.createDataset(ephemeralSchema);
+        doSync();
+
+        // act
+        EphemeralColumn column = ephemeralTable.getColumnByIndex(ephemeralTable.getColumns().size() - 1);
+        SQLStatementFactory statementFactory = source.getSqlStatementFactory();
+        ephemeralTable.updateColumn(statementFactory, column, FireIntermediateDataType.VARCHAR).accept(source);
+        if (shouldReschedule) doSyncWithRescheduled();
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+
+        // act
+        ephemeralSchema.generateDeletes(1).accept(source);
+        ephemeralSchema.generateUpdates(1, false).accept(source);
+        ephemeralSchema.generateAdds(1).accept(source);
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, ephemeralSchema);
+    }
+
+    protected final void verifySchemaCaseSensitive() throws SQLException {
+        // arrange
+        FireIntermediateDataType dataType1 = FireIntermediateDataType.VARCHAR;
+        FireIntermediateDataType dataType2 = FireIntermediateDataType.CHAR;
+        EphemeralSchema schema1 = EphemeralSchema.builder().withSchemaName("CASE_CHECK").build();
+        EphemeralSchema schema2 = EphemeralSchema.builder().withSchemaName("case_check").build();
+        schema1.createPopulatedTable(context, dataType1, 1);
+        schema2.createPopulatedTable(context, dataType2, 1);
+        scenario.getSource().getResource().createDataset(schema1);
+        scenario.getSource().getResource().createDataset(schema2);
+
+        // act
+        doSync();
+
+        // assert
+        assertDestinationData(scenario, integration, schema1);
+        assertDestinationData(scenario, integration, schema2);
+    }
+
+    protected void testMultipleSchemas(SyncMode mode) throws SQLException {
+        List<EphemeralSchema> schemas = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            schemas.add(createSchemaWithRandomSupportedDataTypes(context.getSource().getResource().getDialect(), 2));
+        }
+
+        for (EphemeralSchema sch : schemas) {
+            setSchemaTablesSyncMode(sch, mode);
+            scenario.getSource().getResource().createDataset(sch);
+        }
+
+        // act
+        doSync(); // historic sync
+
+        // add new rows to all schema tables
+        for (EphemeralSchema sch : schemas) {
+            sch.generateAdds(3).accept(context.getSource().getResource());
+        }
+
+        // incremental sync
+        doSync();
+
+        // assert
+        for (EphemeralSchema sch : schemas) {
+            assertDestinationData(scenario, integration, sch);
+        }
+    }
+
+    protected void setSchemaTablesSyncMode(EphemeralSchema schema, SyncMode mode) {
+        for (EphemeralTable tbl : schema.getTables()) {
+            scenario.getProdDB().setSyncMode(integration, tbl.getFullyQualifiedTableName(), mode);
+        }
+    }
+}

@@ -1,0 +1,60 @@
+package com.example.integrations.oracle.e2e;
+
+import com.example.cloud_storage.LocalDiskStorageAddressSpecification;
+import com.example.cloud_storage.StorageAddressSpecifications;
+import com.example.fire.blueprints.database.DockerDBBlueprint;
+import com.example.fire.blueprints.database.DockerDBBlueprintMenu;
+import com.example.fire.e2e.database.sources.OracleFireSource;
+import com.example.fire.shared.FireObjects;
+import com.example.integrations.oracle.OracleCredentials;
+import com.example.lambda.Lazy;
+import com.example.ibf.cloud_storage.IbfPersistentStorage;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public abstract class OracleIbfBaseE2ESpec extends OracleBaseE2ESpec {
+    protected static final Lazy<Path> STORAGE_DIR =
+            new Lazy<>(() -> Files.createTempDirectory("local_disk_ibf_storage_client-"));
+
+    @Override
+    protected DockerDBBlueprint getSourceBlueprint() {
+        return DockerDBBlueprintMenu.ibfOracle19c();
+    }
+
+    @Override
+    protected final void doBeforeEachTest() {
+        OracleFireSource.updateMethod = OracleCredentials.UpdateMethod.IBF;
+    }
+
+    @Override
+    protected List<String> getConfigServiceFlags() {
+        return new ArrayList<>();
+    }
+
+    private Map<String, String> getAdditionalEnvVars() {
+        return Map.of(
+                IbfPersistentStorage.STORAGE_ENV_VAR_NAME,
+                FireObjects.obj2JsonString(
+                        new StorageAddressSpecifications(
+                                null, null, null, new LocalDiskStorageAddressSpecification(STORAGE_DIR.get()))));
+    }
+
+    @Override
+    protected final void doSync() throws SQLException {
+        scenario.sync(integration, getAdditionalEnvVars()).verifySuccess();
+    }
+
+    @Override
+    protected final void doSyncWithRescheduled() throws SQLException {
+        scenario.sync(integration, getAdditionalEnvVars()).verifyRescheduled();
+    }
+
+    @Override
+    protected void doSyncWithoutStatusCheck() throws SQLException {
+        scenario.sync(integration, getAdditionalEnvVars());
+    }
+}

@@ -1,0 +1,70 @@
+package com.example.integrations.oracle.e2e;
+
+import com.example.core.SyncMode;
+import com.example.fire.data.database.OracleStatementFactory;
+import com.example.fire.shared.ColumnMaskType;
+import java.sql.SQLException;
+import org.junit.Test;
+
+public class OracleIbfLegacyE2ESpec extends OracleIbfBaseE2ESpec {
+
+    @Test
+    public void testCompositeKeyLegacyMode() throws SQLException {
+        testCompositeKey(SyncMode.Legacy);
+    }
+
+    @Test
+    public void testSchemaWithAllDataTypesHeapOrganizedLegacy() throws SQLException {
+        testAllDataTypes(SyncMode.Legacy, false, OracleStatementFactory.TableTypes.HEAP_ORGANIZED_TABLE.name());
+    }
+
+    @Test
+    public void testSchemaWithAllDataTypesPartitionedLegacy() throws SQLException {
+        testAllDataTypes(SyncMode.Legacy, false, OracleStatementFactory.TableTypes.PARTITIONED_TABLE.name());
+    }
+
+    @Test
+    public void testSchemaWithAllDataTypesClusteredLegacy() throws SQLException {
+        testAllDataTypes(SyncMode.Legacy, false, OracleStatementFactory.TableTypes.CLUSTERED_TABLE.name());
+    }
+
+    @Test
+    public void testAddDropColumnLegacyMode() throws SQLException {
+        testAddDropColumn(SyncMode.Legacy, false);
+    }
+
+    @Test
+    public void testDropTableLegacyMode() throws SQLException {
+        testDropTable(SyncMode.Legacy);
+    }
+
+    @Test
+    public void testBlockColumnLegacy() throws SQLException {
+        testMaskColumn(SyncMode.Legacy, ColumnMaskType.BLOCK);
+    }
+
+    @Test
+    public void testHashColumnLegacy() throws SQLException {
+        testMaskColumn(SyncMode.Legacy, ColumnMaskType.HASH);
+    }
+
+    @Test
+    public void testRenameTableLegacyMode() throws SQLException {
+        testRenameTable(SyncMode.Legacy);
+    }
+
+    @Test
+    public void testTruncateTableLegacyMode() throws SQLException {
+        testTruncateTable(SyncMode.Legacy);
+    }
+
+    @Test
+    public void testAddTableLegacyMode() throws SQLException {
+        testAddTable(SyncMode.Legacy);
+    }
+
+    @Test
+    public void testMultipleSchemasIbfLegacy() throws SQLException {
+        testMultipleSchemas(SyncMode.Legacy);
+    }
+}
