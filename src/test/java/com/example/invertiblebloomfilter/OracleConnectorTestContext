@@ -1,0 +1,27 @@
+package com.example.integrations.oracle.ibf;
+
+import static com.example.integrations.oracle.ibf.OracleIbfTestUtil.localTestIbfPersistentStorage;
+
+import com.example.core.TableRef;
+import com.example.integrations.oracle.OracleColumn;
+import com.example.integrations.oracle.OracleConnectorTestContext;
+import com.example.integrations.oracle.spi.OracleAbstractIncrementalUpdater;
+import com.example.ibf.cloud_storage.IbfPersistentStorage;
+import java.util.List;
+import java.util.Map;
+
+public class OracleConnectorIbfTestContext extends OracleConnectorTestContext {
+
+    public OracleConnectorIbfTestContext() {
+        OracleIbfContext.override(IbfPersistentStorage.class, () -> localTestIbfPersistentStorage());
+    }
+
+    @Override
+    public OracleAbstractIncrementalUpdater newIncrementalUpdater(Map<TableRef, List<OracleColumn>> selected) {
+        return super.newIncrementalUpdater(selected);
+    }
+
+    public OracleIbfContext getOracleIbfContext() {
+        return ibfContext.get();
+    }
+}

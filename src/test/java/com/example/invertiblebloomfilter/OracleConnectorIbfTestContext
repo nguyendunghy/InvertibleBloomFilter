@@ -1,0 +1,15 @@
+package com.example.integrations.oracle;
+
+public abstract class OracleConnectorTestContext extends OracleConnectorContext {
+
+    @Override
+    public OracleApi getOracleApi() {
+        return new OracleApi(
+                newConnectionManager(), getCredentials(), new OracleDbObjectValidator(), getMetaDataUtil(), false) {
+            @Override
+            protected String getExcludedSchemas() {
+                return super.getExcludedSchemas() + ",'APEX_040000','HR'";
+            }
+        }.withDatabaseQuery(getDatabaseQuery());
+    }
+}

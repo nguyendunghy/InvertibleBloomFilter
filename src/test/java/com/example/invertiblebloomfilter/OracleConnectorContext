@@ -1,0 +1,465 @@
+package com.example.integrations.oracle;
+
+import static java.util.Objects.*;
+
+import com.example.cloud_storage.StorageEnvironmentVariable;
+import com.example.core.ConnectionParameters;
+import com.example.core.StandardConfig;
+import com.example.core.TableRef;
+import com.example.core.storage.PersistentStorage;
+import com.example.core2.Output;
+import com.example.crypto.DataKey;
+import com.example.database.CertificateSource;
+import com.example.database.DB;
+import com.example.flag.FeatureFlag;
+import com.example.flag.FlagName;
+import com.example.integrations.db.impl.HashIdGeneratorImpl;
+import com.example.integrations.db.spi.AbstractHashIdGenerator;
+import com.example.integrations.oracle.logminer.TimestampConverterBuilder;
+import com.example.integrations.oracle.meta.OracleTableInfoContext;
+import com.example.integrations.oracle.meta.OracleTableInfoProvider;
+import com.example.integrations.oracle.meta.OracleTableMetricsProvider;
+import com.example.integrations.oracle.meta.OracleTableMetricsProviderImpl;
+import com.example.integrations.oracle.spi.DbObjectValidator;
+import com.example.integrations.oracle.spi.OracleAbstractIncrementalUpdater;
+import com.example.integrations.oracle.spi.OracleIncrementalUpdaterFactory;
+import com.example.integrations.oracle.system.DatabaseQuery;
+import com.example.integrations.oracle.ibf.OracleIbfContext;
+import com.example.integrations.oracle.ibf.OracleIbfDbObjectValidator;
+import com.example.integrations.oracle.util.ConnectionManagerWithRetry;
+import com.example.integrations.oracle.util.MetaDataUtil;
+import com.example.integrations.persistent_storage.PersistentStorageContext;
+import com.example.integrations.persistent_storage.PersistentStorageContextFactory;
+import com.example.integrations.persistent_storage.StorageAddressSpecificationNotFound;
+import com.example.lambda.Lazy;
+import com.example.lambda.SetOnce;
+import com.example.logger.db.LoggableConfig;
+import com.example.logger.db.LoggableDataSource;
+import com.example.port.TunnelDataSource;
+import com.example.secred.util.SecredUtil;
+import com.example.secrets.common.EncryptionService;
+import com.example.secrets.common.GroupCredentialType;
+import com.example.secrets.common.context.StorageEncryptionContext;
+import com.example.secrets.services.EncryptionServiceFactory;
+import com.example.utils.SyncAdapter;
+import com.example.utils.beans.SingletonBeanFactory;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import java.util.*;
+import java.util.function.Supplier;
+import javax.crypto.SecretKey;
+import javax.sql.DataSource;
+
+/**
+ * A super Builder that encapsulates object creation to reduce complexity related to instantiating objects and allows
+ * optional overriding of factory methods.
+ *
+ * <p>This can be thought of as similar to a context or configuration object in a dependency injection framework.
+ */
+public class OracleConnectorContext implements OracleIncrementalUpdaterFactory {
+    private final SingletonBeanFactory<OracleApi> oracleApi = new SingletonBeanFactory<>(this::newOracleApi);
+
+    private OracleService oracleService;
+    private ConnectionParameters connectionParameters;
+    private final SingletonBeanFactory<OracleResyncHelper> oracleResyncHelper =
+            new SingletonBeanFactory<>(OracleResyncHelper::new);
+    private final SingletonBeanFactory<OracleMetricsHelper> oracleMetricsHelper =
+            new SingletonBeanFactory<>(this::defaultOracleMetricsHelper);
+    private OracleState oracleState;
+    private final AbstractHashIdGenerator hashIdGenerator = new HashIdGeneratorImpl();
+    private Output<OracleState> output;
+    private final SingletonBeanFactory<OracleOutputHelper> oracleOutputHelper =
+            new SingletonBeanFactory<>(this::defaultOracleOutputHelper);
+    private SyncAdapter oracleSyncAdapter;
+    private final SingletonBeanFactory<DatabaseQuery> databaseQuery =
+            new SingletonBeanFactory<>(() -> new DatabaseQuery(newConnectionManager()));
+    private final SingletonBeanFactory<PersistentStorageContextFactory> persistentStorageContextFactory =
+            new SingletonBeanFactory<>(
+                    () -> new PersistentStorageContextFactory(StorageEnvironmentVariable.TRIDENT_STORAGE.name()));
+
+    private final SingletonBeanFactory<PersistentStorageContext> persistentStorageContext =
+            new SingletonBeanFactory<>(this::defaultPersistentStorageContext);
+
+    private final SingletonBeanFactory<OracleTableMetricsProvider> oracleTableMetricsProvider =
+            new SingletonBeanFactory<>(this::defaultOracleTableMetricsProvider);
+
+    private final SingletonBeanFactory<DataSource> dataSource = new SingletonBeanFactory<>(this::defaultDataSource);
+
+    private final SingletonBeanFactory<CertificateSource> certificateSource =
+            new SingletonBeanFactory<>(this::defaultCertificateSource);
+
+    private final SingletonBeanFactory<DbObjectValidator> dbObjectValidatorSingleton =
+            new SingletonBeanFactory<>(this::newDbObjectValidator);
+
+    private final SingletonBeanFactory<MetaDataUtil> metaDataUtilSingleton =
+            new SingletonBeanFactory<>(MetaDataUtil::newInstance);
+
+    private OracleCredentials credentials;
+    private StandardConfig standardConfig;
+
+    private final SetOnce<Boolean> isHva = new SetOnce<>();
+    protected final SingletonBeanFactory<OracleIbfContext> ibfContext =
+            new SingletonBeanFactory<>(() -> new OracleIbfContext(this));
+
+    private final Lazy<Boolean> isUsingIbf =
+            new Lazy<>(
+                    () ->
+                            getCredentials() != null
+                                    && getCredentials().updateMethod == OracleCredentials.UpdateMethod.Ibf);
+
+    private static Map<Class<?>, Supplier<?>> overrides = new HashMap<>();
+
+    public static void override(Class<?> typeOf, Supplier<?> override) {
+        overrides.put(typeOf, override);
+    }
+
+    public static void clearOverrides() {
+        overrides.clear();
+    }
+
+    public OracleConnectorContext() {
+        // Apply any overrides now. Add additional overrides as needed.
+
+        if (overrides.containsKey(OracleApi.class)) {
+            oracleApi.override(() -> (OracleApi) overrides.get(OracleApi.class).get());
+        }
+
+        if (overrides.containsKey(CertificateSource.class)) {
+            certificateSource.override(() -> (CertificateSource) overrides.get(CertificateSource.class).get());
+        }
+
+        if (overrides.containsKey(OracleOutputHelper.class)) {
+            oracleOutputHelper.override(() -> (OracleOutputHelper) overrides.get(OracleOutputHelper.class).get());
+        }
+
+        if (overrides.containsKey(DatabaseQuery.class)) {
+            databaseQuery.override(() -> (DatabaseQuery) overrides.get(DatabaseQuery.class).get());
+        }
+    }
+
+    public OracleApi getOracleApi() {
+        return oracleApi.get();
+    }
+
+    public OracleConnectorContext oracleApi(OracleApi oracleApi) {
+        this.oracleApi.set(oracleApi);
+        return this;
+    }
+
+    protected ConnectionManagerWithRetry newConnectionManager() {
+        return new ConnectionManagerWithRetry(getDataSource(), getCredentials().pdbName);
+    }
+
+    public DatabaseQuery getDatabaseQuery() {
+        return databaseQuery.get();
+    }
+
+    public OracleConnectorContext oracleDatabaseQuery(DatabaseQuery databaseQuery) {
+        this.databaseQuery.set(databaseQuery);
+        return this;
+    }
+
+    public OracleService getOracleService() {
+        return oracleService;
+    }
+
+    public OracleConnectorContext oracleService(OracleService oracleService) {
+        this.oracleService = oracleService;
+        return this;
+    }
+
+    public OracleConnect getOracleConnect() {
+        return new OracleConnect(certificateSource.get());
+    }
+
+    public ConnectionParameters getConnectionParameters() {
+        return connectionParameters;
+    }
+
+    public OracleConnectorContext connectionParameters(ConnectionParameters connectionParameters) {
+        this.connectionParameters = connectionParameters;
+        return this;
+    }
+
+    public OracleMetricsHelper getOracleMetricsHelper() {
+        return oracleMetricsHelper.get();
+    }
+
+    public OracleResyncHelper getOracleResyncHelper() {
+        return oracleResyncHelper.get();
+    }
+
+    public OracleConnectorContext oracleResyncHelper(OracleResyncHelper oracleResyncHelper) {
+        this.oracleResyncHelper.set(oracleResyncHelper);
+        return this;
+    }
+
+    public AbstractHashIdGenerator getHashIdGenerator() {
+        return hashIdGenerator;
+    }
+
+    public OracleState getOracleState() {
+        return oracleState;
+    }
+
+    public OracleConnectorContext oracleState(OracleState oracleState) {
+        this.oracleState = oracleState;
+        return this;
+    }
+
+    public Output<OracleState> getOutput() {
+        return output;
+    }
+
+    public OracleConnectorContext output(Output<OracleState> output) {
+        this.output = output;
+        return this;
+    }
+
+    public OracleOutputHelper getOracleOutputHelper() {
+        return oracleOutputHelper.get();
+    }
+
+    public OracleConnectorContext oracleOutputHelper(OracleOutputHelper oracleOutputHelper) {
+        this.oracleOutputHelper.set(oracleOutputHelper);
+        return this;
+    }
+
+    public SyncAdapter getOracleSyncAdapter() {
+        return oracleSyncAdapter;
+    }
+
+    public OracleConnectorContext oracleSyncAdapter(SyncAdapter oracleSyncAdapter) {
+        this.oracleSyncAdapter = oracleSyncAdapter;
+        return this;
+    }
+
+    public SecretKey getEncryptionKey() {
+        return getEncryptionKey(getOracleState(), getConnectionParameters().owner);
+    }
+
+    public SecretKey getEncryptionKey(OracleState state, String groupId) {
+        EncryptionService encryptionService =
+                Optional.ofNullable(SecredUtil.getSecredTokenFromEnvironment())
+                        .map(EncryptionServiceFactory::createService)
+                        .orElseGet(() -> EncryptionServiceFactory.createGroupService(groupId));
+
+        if (state.getEncryptedKey() == null) {
+            DataKey dataKey = encryptionService.getDataKey(GroupCredentialType.GROUP_DATA, groupId);
+            state.setEncryptedKey(dataKey.encryptedKey);
+        }
+        return encryptionService.decryptDataKey(GroupCredentialType.GROUP_DATA, groupId, state.getEncryptedKey());
+    }
+
+    @Override
+    public OracleAbstractIncrementalUpdater newIncrementalUpdater(Map<TableRef, List<OracleColumn>> selected) {
+        if (isUsingIbf.get()) {
+            return ibfContext.get().newIncrementalUpdater(selected);
+        }
+
+        if (FlagName.OracleLogMinerStream.check() && !FlagName.OracleFlashback.check()) {
+            return new OracleIncrementalUpdaterLogStream(this, selected);
+        }
+
+        return new OracleIncrementalUpdater(
+                getOracleState(),
+                getOracleApi(),
+                getHashIdGenerator(),
+                getOracleOutputHelper(),
+                getOracleResyncHelper(),
+                getOracleMetricsHelper(),
+                selected);
+    }
+
+    public OracleUpdater newOracleUpdater() {
+        return new OracleUpdater(
+                getOracleService(),
+                getOracleApi(),
+                getOracleState(),
+                getConnectionParameters(),
+                getHashIdGenerator(),
+                this);
+    }
+
+    PersistentStorage getPersistentStorage() {
+        return persistentStorageContext.get().getPersistentStorage();
+    }
+
+    public String getStorageId() {
+        requireNonNull(oracleState, "Did you forget to call oracleState(...)?");
+        return oracleState.initializeStorageId();
+    }
+
+    public PersistentStorageContextFactory getPersistentStorageContextFactory() {
+        return persistentStorageContextFactory.get();
+    }
+
+    public void setPersistentStorageContextFactory(PersistentStorageContextFactory val) {
+        persistentStorageContextFactory.set(val);
+    }
+
+    private PersistentStorageContext defaultPersistentStorageContext() throws StorageAddressSpecificationNotFound {
+        return getPersistentStorageContextFactory()
+                .newContext(getStorageId(), new StorageEncryptionContext().toJsonString());
+    }
+
+    private OracleMetricsHelper defaultOracleMetricsHelper() {
+        OracleMetricsHelper bean = new OracleMetricsHelper();
+
+        if (getCredentials() != null) {
+            bean.setUpdateMethod(getCredentials().updateMethod);
+        }
+
+        return bean;
+    }
+
+    public OracleConnectorContext credentials(OracleCredentials credentials) {
+        this.credentials = credentials;
+        return this;
+    }
+
+    public OracleConnectorContext standardConfig(StandardConfig sc) {
+        this.standardConfig = sc;
+        return this;
+    }
+
+    public StandardConfig getStandardConfig() {
+        return standardConfig;
+    }
+
+    public OracleCredentials getCredentials() {
+        return credentials;
+    }
+
+    private OracleOutputHelper defaultOracleOutputHelper() {
+        return new OracleOutputHelper(
+                requireNonNull(getOutput(), "call output(...) first."),
+                requireNonNull(getConnectionParameters(), "call connectionPrameters(...) first.").schema,
+                requireNonNull(getStandardConfig(), "call standardConfig(...) first."),
+                null,
+                getOracleMetricsHelper(),
+                getMetaDataUtil());
+    }
+
+    public OracleTableMetricsProvider getOracleTableMetricsProvider() {
+        return oracleTableMetricsProvider.get();
+    }
+
+    public OracleConnectorContext oracleTableMetricsProvider(OracleTableMetricsProvider provider) {
+        oracleTableMetricsProvider.set(provider);
+        return this;
+    }
+
+    public OracleTableInfoProvider getOracleTableInfoProvider(Map<TableRef, List<OracleColumn>> selected) {
+        return new OracleTableInfoContext(
+                getOracleTableMetricsProvider(), getOracleState(), getStandardConfig(), selected);
+    }
+
+    private OracleTableMetricsProvider defaultOracleTableMetricsProvider() {
+        return new OracleTableMetricsProviderImpl(getOracleApi());
+    }
+
+    public OracleConnectorContext dataSource(DataSource dataSource) {
+        this.dataSource.set(dataSource);
+        return this;
+    }
+
+    public final DataSource getDataSource() {
+        return dataSource.get();
+    }
+
+    private CertificateSource defaultCertificateSource() {
+        return new CertificateSource();
+    }
+
+    private DataSource defaultDataSource() {
+        Objects.requireNonNull(getCredentials(), "call credentials(...) first");
+        Objects.requireNonNull(getConnectionParameters(), "call connectionParameters(...) first");
+
+        TunnelDataSource tunnelDataSource =
+                new OracleRetrier()
+                        .call(
+                                () ->
+                                        getOracleConnect()
+                                                .withConnectionType(credentials.getConnectionType())
+                                                .connectViaHvrTunnel(
+                                                        getCredentials(),
+                                                        getConnectionParameters(),
+                                                        "oracle",
+                                                        false,
+                                                        DB.source()),
+                                4);
+
+        return createLoggableDataSource(createPoolingDataSource(tunnelDataSource));
+    }
+
+    protected DataSource createLoggableDataSource(DataSource dataSource) {
+        return new LoggableDataSource(
+                dataSource,
+                new LoggableConfig.Builder()
+                        .setWritesToCustomerLogs(true)
+                        .setCloseResourcesQuietly(true)
+                        .setConnectionQueryNumberMappingLog(true)
+                        .build());
+    }
+
+    protected DataSource createPoolingDataSource(TunnelDataSource tunnelDataSource) {
+        if (isHva() || FeatureFlag.check("NoHikariConnectionPool")) {
+            return tunnelDataSource;
+        }
+
+        HikariConfig c = new HikariConfig();
+
+        c.setMaximumPoolSize(5);
+        c.setDataSource(tunnelDataSource);
+
+        return new HikariDataSource(c) {
+            @Override
+            public void close() {
+                super.close();
+                tunnelDataSource.close();
+            }
+        };
+    }
+
+    private OracleApi newOracleApi() {
+        return new OracleApi(
+                        newConnectionManager(), getCredentials(), getDbObjectValidator(), getMetaDataUtil(), isHva())
+                .withDatabaseQuery(getDatabaseQuery());
+    }
+
+    private DbObjectValidator newDbObjectValidator() {
+        if (isUsingIbf.get()) {
+            return new OracleIbfDbObjectValidator();
+        }
+
+        return new OracleDbObjectValidator();
+    }
+
+    public DbObjectValidator getDbObjectValidator() {
+        return dbObjectValidatorSingleton.get();
+    }
+
+    public boolean isHva() {
+        return isHva.getOrDefault(false);
+    }
+
+    public OracleConnectorContext setHva(boolean hva) {
+        isHva.set(hva);
+        return this;
+    }
+
+    public OracleConnectorContext setOracleMetricsHelper(OracleMetricsHelper val) {
+        oracleMetricsHelper.set(val);
+        return this;
+    }
+
+    public TimestampConverterBuilder getTimestampConverterBuilder() {
+        return new TimestampConverterBuilder(
+                getDatabaseQuery(), requireNonNull(getOracleState(), "call oracleState(...) first"));
+    }
+
+    public MetaDataUtil getMetaDataUtil() {
+        return metaDataUtilSingleton.get();
+    }
+}
