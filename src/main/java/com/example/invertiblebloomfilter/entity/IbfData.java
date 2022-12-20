@@ -1,5 +1,6 @@
 package com.example.invertiblebloomfilter.entity;
 
+import com.example.invertiblebloomfilter.ibf.LongLong;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,5 +11,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class IbfData {
-    private long rowHashNumber;
+    private String rowHash;
+
+    public LongLong getRowHash(){
+        return new LongLong(rowHash);
+    }
+
+
 }

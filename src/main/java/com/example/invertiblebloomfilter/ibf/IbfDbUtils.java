@@ -49,9 +49,9 @@ public class IbfDbUtils {
             for (int i = 0; i < keyLengthsSum; i++) {
                 keySums[i] = rs.getLong(columnIndex++);
             }
-            long rowHashSum = rs.getLong(columnIndex++);
+            String rowHashSum = rs.getString(columnIndex++);
             long cCount = rs.getLong(columnIndex);
-            ibf.loadFromDatabase(cellIndex, keySums, rowHashSum, cCount);
+            ibf.loadFromDatabase(cellIndex, keySums, new LongLong(rowHashSum), cCount);
         }
     }
 
@@ -84,11 +84,11 @@ public class IbfDbUtils {
             for (int i = 0; i < keySumsLength; i++) {
                 keySums[i] = rs.getLong(columnIndex++);
             }
-            long keyHashSum = rs.getLong(columnIndex++);
+            String keyHashSum = rs.getString(columnIndex++);
             long cCount = rs.getLong(columnIndex);
 
             se.loadFromDatabase(
-                    STRATA_ESTIMATOR_MOD_37_BIT_POSITION[strataIndexForLookup], cellIndex, keySums, keyHashSum, cCount);
+                    STRATA_ESTIMATOR_MOD_37_BIT_POSITION[strataIndexForLookup], cellIndex, keySums, new LongLong(keyHashSum), cCount);
         }
     }
 

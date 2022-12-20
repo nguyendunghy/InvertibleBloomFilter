@@ -27,12 +27,22 @@ public class OneHashingBloomFilterUtils {
         return Math.toIntExact(Arrays.stream(divisors).sum());
     }
 
-    public static Function<Long, long[]> indexHashes(long[] divisors) {
+//    public static Function<Long, long[]> indexHashes(long[] divisors) {
+//        long[] offsets = partitionOffsets(divisors);
+//
+//        return rowHashSum ->
+//                IntStream.range(0, divisors.length)
+//                        .mapToLong(i -> Math.abs(rowHashSum % divisors[i]) + offsets[i])
+//                        .toArray();
+//    }
+
+
+    public static Function<LongLong, long[]> indexHashes(long[] divisors) {
         long[] offsets = partitionOffsets(divisors);
 
         return rowHashSum ->
                 IntStream.range(0, divisors.length)
-                        .mapToLong(i -> Math.abs(rowHashSum % divisors[i]) + offsets[i])
+                        .mapToLong(i -> Math.abs(rowHashSum.hashCode() % divisors[i]) + offsets[i])
                         .toArray();
     }
 

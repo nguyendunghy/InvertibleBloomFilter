@@ -1,6 +1,6 @@
 #evaluate($output)
 #macro(selectChangedData)
-SELECT * FROM (#tempNumberizeHashTableData()) WHERE  ROW_HASH_NUMBER = ?
+SELECT * FROM (#tempHashTableData()) WHERE  ROWHASH = ?
 #end
 
 #macro(tempNumberizeHashTableData)

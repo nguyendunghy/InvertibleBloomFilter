@@ -41,7 +41,10 @@ public class IbfDataRepoImpl implements IbfDataRepo {
             jdbcTemplate.query(ibfQuery, resultSet -> {
 
                 do {
-                    IbfData row = new IbfData(resultSet.getLong("ROW_HASH_NUMBER"));
+                    IbfData row = new IbfData(
+                            resultSet.getString("ROWHASH")
+
+                    );
                     invertibleBloomFilter.insert(row);
                 } while (resultSet.next());
 
@@ -59,7 +62,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 IBF_QUERY,
                 (rs, rowNum) ->
                         new IbfData(
-                                rs.getLong("ROW_HASH_NUMBER"))
+                                rs.getString("ROWHASH"))
         );
     }
 

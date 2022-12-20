@@ -1,9 +1,4 @@
 #evaluate($output)
-#macro(numberizeHashTableData)
-SELECT TO_NUMBER(SUBSTR(ROWHASH, 1, 15), 'XXXXXXXXXXXXXXXX')    as ROW_HASH_NUMBER
-FROM (#hashTableData())
-#end
-
 #macro(hashTableData)
 SELECT DBMS_OBFUSCATION_TOOLKIT.MD5(input => UTL_RAW.CAST_TO_RAW(#concatRowData())) as ROWHASH
 FROM (#distinctData())
