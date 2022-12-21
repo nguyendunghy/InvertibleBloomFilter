@@ -28,7 +28,7 @@ public class LongLong {
     }
 
 
-    public long toLongValue() {
+    public long longValue() {
         if(value == null){
             return 0;
         }

@@ -42,7 +42,7 @@ public class OneHashingBloomFilterUtils {
 
         return rowHashSum ->
                 IntStream.range(0, divisors.length)
-                        .mapToLong(i -> Math.abs(rowHashSum.toLongValue() % divisors[i]) + offsets[i])
+                        .mapToLong(i -> Math.abs(rowHashSum.longValue() % divisors[i]) + offsets[i])
                         .toArray();
     }
 

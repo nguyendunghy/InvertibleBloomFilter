@@ -32,7 +32,7 @@ public class StrataEstimator {
     }
 
     private int getNumberOfTrailingZeroes(LongLong x) {
-        return x == null || x.isEmpty() ? 0 : Long.numberOfTrailingZeros(x.toLongValue());
+        return x == null || x.isEmpty() ? 0 : Long.numberOfTrailingZeros(x.longValue());
     }
 
     public static StrataEstimatorDecodeResult estimateDifference(StrataEstimator seA, StrataEstimator seB) {
