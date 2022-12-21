@@ -66,7 +66,6 @@ public class InvertibleBloomFilter {
     public InvertibleBloomFilter(int keyLengthsSum, long[] divisors) {
         this.keyLengthsSum = keyLengthsSum;
         this.divisors = divisors;
-
         this.indicesHash = OneHashingBloomFilterUtils.indexHashes(divisors);
 
 //        this.cells =
@@ -80,7 +79,7 @@ public class InvertibleBloomFilter {
 //                        });
         this.cells = new Cell[OneHashingBloomFilterUtils.totalCellCount(divisors)];
         for (int i = 0; i < cells.length; i++) {
-            cells[i] = new Cell(new long[this.keyLengthsSum], new LongLong(), 0L);
+            cells[i] = new Cell(new long[this.keyLengthsSum], new LongLong(""), 0L);
         }
     }
 
@@ -162,9 +161,9 @@ public class InvertibleBloomFilter {
 
             Cell pureCell = getCell(index).copy();
             if (pureCell.getCount() > 0) {
-                result.aWithoutB.add(new IBFDecodeResultElement(pureCell.keySums(), pureCell.rowHashSum()));
+                result.aWithoutB.add(new IBFDecodeResultElement(pureCell.keySums(), pureCell.rowHashSum().copy()));
             } else {
-                result.bWithoutA.add(new IBFDecodeResultElement(pureCell.keySums(), pureCell.rowHashSum()));
+                result.bWithoutA.add(new IBFDecodeResultElement(pureCell.keySums(), pureCell.rowHashSum().copy()));
             }
 
             for (int cellIndex : distinctHashIndices(pureCell.rowHashSum())) {

@@ -49,7 +49,7 @@ public class IbfSyncResult {
         return ibfDecodeResult
                 .aWithoutB
                 .stream()
-                .map(element -> retrieveRecord(element.rowHashSum + "", retrieveQuery))
+                .map(element -> retrieveRecord(element.rowHashSum.getValue(), retrieveQuery))
 //                .map(element -> IbfDbUtils.decodePk(primaryKeyTypes, keyLengths, element.keySum))
                 // sorting the primary keys causes rows from the same page in the database to be fetched together
                 .sorted(new ListComparator<>())
@@ -64,7 +64,7 @@ public class IbfSyncResult {
                 ibfDecodeResult
                         .bWithoutA
                         .stream()
-                        .map(element -> retrieveHistoryRecord(element.rowHashSum + "", retrieveHistoryQuery))
+                        .map(element -> retrieveHistoryRecord(element.rowHashSum.getValue(), retrieveHistoryQuery))
 //                        .map(element -> IbfDbUtils.decodePk(primaryKeyTypes, keyLengths, element.keySum))
                         .collect(Collectors.toSet());
         upserts().forEach(bKeys::remove);

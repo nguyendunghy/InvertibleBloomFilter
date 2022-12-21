@@ -6,6 +6,7 @@ import com.example.invertiblebloomfilter.entity.IbfData;
 import com.example.invertiblebloomfilter.entity.IbfEntity;
 import com.example.invertiblebloomfilter.ibf.Cell;
 import com.example.invertiblebloomfilter.ibf.InvertibleBloomFilter;
+import com.example.invertiblebloomfilter.ibf.LongLong;
 import com.example.invertiblebloomfilter.repo.CellRepo;
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
 import com.example.invertiblebloomfilter.repo.IbfRepo;
@@ -51,7 +52,7 @@ public class IbfService {
             ibf.loadFromDatabase(
                     cell.getCellIndex().intValue(),
                     split(cell.getKeySums()),
-                    cell.getRowHashSum(),
+                    new LongLong(cell.getRowHashSum()),
                     cell.getCount());
         }
 
@@ -87,7 +88,7 @@ public class IbfService {
             cellEntity.setId(maxId + count + 1);
             cellEntity.setIbfId(ibfId);
             cellEntity.setCellIndex((long) count);
-            cellEntity.setRowHashSum(cell.rowHashSum());
+            cellEntity.setRowHashSum(cell.rowHashSum().getValue());
             String keySum = join(cell.keySums());
             cellEntity.setKeySums(keySum);
             cellEntity.setCount(cell.getCount());

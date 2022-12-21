@@ -33,7 +33,7 @@ public class CellRepoImpl implements CellRepo {
                                 rs.getLong("ID"),
                                 rs.getLong("IBF_ID"),
                                 rs.getLong("CELL_INDEX"),
-                                rs.getLong("ROW_HASH_SUM"),
+                                rs.getString("ROW_HASH_SUM"),
                                 rs.getString("KEY_SUMS"),
                                 rs.getLong("COUNT")
 

@@ -10,7 +10,7 @@ import lombok.*;
 @ToString
 @Builder
 public class DataTable {
-    private long rowHashNumber;
+    private String rowHash;
     private String stringColumn;
     private String numberColumn;
     private String  dateColumn;

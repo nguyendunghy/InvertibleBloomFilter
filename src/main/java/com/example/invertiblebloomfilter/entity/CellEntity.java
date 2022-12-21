@@ -12,7 +12,7 @@ public class CellEntity {
     private Long id;
     private Long ibfId;
     private Long cellIndex;
-    private LongLong rowHashSum;
+    private String rowHashSum;
     private String keySums;
     private long count;
 }

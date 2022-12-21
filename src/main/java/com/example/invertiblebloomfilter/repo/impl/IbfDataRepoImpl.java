@@ -33,7 +33,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                         "invertible_bloom_filter.vm",
                         "IBF_DATA",
                         new String[]{"STRING_COLUMN", "NUMBER_COLUMN", "DATE_COLUMN", "CLOB_COLUMN"},
-                        "numberizeHashTableData"
+                        "hashTableData"
                 );
             }
 
@@ -81,7 +81,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
         }
         return jdbcTemplate.query(retrieveDataQuery, new Object[]{rowHash}, (rs, rowNum) ->
                 new DataTable(
-                        rs.getLong("ROW_HASH_NUMBER"),
+                        rs.getString("ROWHASH"),
                         rs.getString("STRING_COLUMN"),
                         rs.getString("NUMBER_COLUMN"),
                         rs.getString("DATE_COLUMN"),
@@ -106,7 +106,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
 
         return jdbcTemplate.query(retrieveHistoryDataQuery, new Object[]{rowHash}, (rs, rowNum) ->
                 new DataTable(
-                        rs.getLong("ROW_HASH_NUMBER"),
+                        rs.getString("ROWHASH"),
                         rs.getString("STRING_COLUMN"),
                         rs.getString("NUMBER_COLUMN"),
                         rs.getString("DATE_COLUMN"),

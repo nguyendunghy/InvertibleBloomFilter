@@ -164,7 +164,7 @@ public class OracleIBFQueryBuilder {
                 "invertible_bloom_filter.vm",
                 ibfTableInfo.getTableRef().name,
                 this.arrayOfPrimaryKeys,
-                "numberizeHashTableData"
+                "hashTableData"
         );
 
         return ibfQuery;

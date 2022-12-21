@@ -152,7 +152,7 @@ public class Cell {
     }
 
     public Cell copy() {
-        return new Cell(Arrays.copyOf(keySums(), keySums().length), rowHashSum(), getCount());
+        return new Cell(Arrays.copyOf(keySums(), keySums().length), rowHashSum().copy(), getCount());
     }
 
     @Override

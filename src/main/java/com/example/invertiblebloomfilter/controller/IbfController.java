@@ -26,7 +26,7 @@ public class IbfController {
 
     @GetMapping(value = "/init", consumes = "application/json", produces = "application/json")
     public CommonResponse init() {
-        InvertibleBloomFilter invertibleBloomFilter = new InvertibleBloomFilter(4, 7);
+        InvertibleBloomFilter invertibleBloomFilter = createInvertibleBloomFilter();
         ibfService.streamIbfData(invertibleBloomFilter);
         ibfService.saveIbf(invertibleBloomFilter);
 
@@ -41,7 +41,7 @@ public class IbfController {
     public CommonResponse diff() {
         InvertibleBloomFilter oldIBF = ibfService.retrieveIbf();
 
-        InvertibleBloomFilter newIBF = new InvertibleBloomFilter(4, 7);
+        InvertibleBloomFilter newIBF = createInvertibleBloomFilter();
         ibfService.streamIbfData(newIBF);
 
         InvertibleBloomFilter copiedNewIbf = newIBF.copy();
@@ -92,30 +92,9 @@ public class IbfController {
     }
 
 
-    @GetMapping(value = "/testIbfCheckpointManager", consumes = "application/json", produces = "application/json")
-    public CommonResponse testIbfCheckpointManager() {
-        try {
-//            File file = new File("IbfLocal.txt");
-//            Path path = file.toPath();
-//            System.out.println("Using local ibf storage location " + path);
-//            LocalDiskStorageAddressSpecification localDiskStorageAddressSpecification = new LocalDiskStorageAddressSpecification(path);
-//            LocalDiskIbfStorageClient localDiskIbfStorageClient = new LocalDiskIbfStorageClient(localDiskStorageAddressSpecification);
-//            SecretKey secretKey = Encrypt.newDataEncryptionKey();
-//            IbfPersistentStorage ibfPersistentStorage = new IbfPersistentStorage(localDiskIbfStorageClient, secretKey);
-//
-//
-//            IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(null, ibfPersistentStorage, null);
-//            ibfCheckpointManager.diff();
-
-            return CommonResponse.builder()
-                    .code(Constant.SUCCESS_CODE)
-                    .message(Constant.SUCCESS_MESS)
-                    .value(null)
-                    .build();
-        } catch (Exception ex) {
-            log.info("have error", ex);
-        }
-        return CommonResponse.builder().build();
+    private InvertibleBloomFilter createInvertibleBloomFilter(){
+        InvertibleBloomFilter newIBF = new InvertibleBloomFilter(4, 20);
+        return newIBF;
     }
 
 
