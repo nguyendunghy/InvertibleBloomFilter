@@ -1,0 +1,31 @@
+# $isImporting - when true, leave the query open-ended to match specific keys with a query builder
+#macro(setup $columns $isImporting)
+    SELECT DISTINCT
+     MD5_HEX(CONCAT_WS('|'
+        #foreach ($column in $columns), #stringifyNullable($column) #end
+     )) AS $helper.quote($rowHashIdentifier)
+     #foreach ($column in $columns), $helper.quote($column.name) #end
+     #if($isImporting)
+       FROM $table WHERE
+     #else
+       FROM $table;
+     #end
+#end
+
+######
+## Stringify any nullable column
+## $column: SnowflakeIbfColumnInfo
+######
+#macro(stringifyNullable $column)
+COALESCE(#stringify($column), '')
+#end
+
+#macro(stringify $column)
+#if ($helper.isBinary($column.destinationType))
+    HEX_ENCODE($helper.quote($column.name))
+#elseif($helper.isSpatialType($column.sourceType))
+    ST_ASTEXT($helper.quote($column.name))
+#else
+    TO_CHAR($helper.quote($column.name))
+#end
+#end

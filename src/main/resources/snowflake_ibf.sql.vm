@@ -1,0 +1,346 @@
+##
+## Output Macros
+##
+#macro(invertibleBloomFilter)
+    #_invertibleBloomFilter(false)
+#end
+
+#macro(commonInvertibleBloomFilter)
+    #_invertibleBloomFilter(true)
+#end
+
+## cellIndex: Compute one of the 3 distinct hash indices for the row based on the _ibf_hash_index. To
+## ensure each hash function returns a distinct index, we split the cells into 3 partitions and ensure each
+## hash function only outputs indices in one of the partitions.
+#macro(_invertibleBloomFilter $common)
+    SELECT
+        CASE value::integer
+            WHEN 0 THEN ABS(#identityHash() % $primeDivisors[0]) ## + $partitionOffsets[0] => always 0
+            WHEN 1 THEN ABS(#identityHash() % $primeDivisors[1]) + $partitionOffsets[1]
+            WHEN 2 THEN ABS(#identityHash() % $primeDivisors[2]) + $partitionOffsets[2]
+    END
+
+    ## Aggregate the #columns() values into the keySum array of the Cell via XOR
+    #keySumsAggregates()
+
+    ##if($keyLength >= 2) BITXOR(cCol3) AS idsum2, #end
+
+    ## Count of rows inserted into each Cell
+
+
+    #columns($common) FROM $table
+
+
+
+    ## Aggregate all rows in the table into cells
+
+#end
+
+#macro(commonStratifiedInvertibleBloomFilter)
+    SELECT
+        BITAND(-_ibf_key_hash, _ibf_key_hash) % 37,
+        CASE value::integer
+            WHEN 0 THEN ABS(#identityHash() % $primeDivisors[0]) ## + $partitionOffsets[0] => always 0
+            WHEN 1 THEN ABS(#identityHash() % $primeDivisors[1]) + $partitionOffsets[1]
+            WHEN 2 THEN ABS(#identityHash() % $primeDivisors[2]) + $partitionOffsets[2]
+    END
+
+    ## Aggregate the #columns() values into the keySum array of the Cell via XOR
+    #keySumsAggregates()
+
+    ##if($keyLength >= 2) BITXOR(cCol3) AS idsum2, #end
+
+    ## Count of rows inserted into each Cell
+
+
+
+    #pkHash()
+    #columns(true)
+    $table
+    #filterInactiveRows()
+    $filterPageBoundaries
+
+
+
+    ## Aggregate all rows in the table into cells
+
+#end
+
+#macro(commonIntermediateRows)
+    SELECT
+        #columns(true), ## keys and rowHash
+        #commonMd5Hash(),
+        #commonRowRepresentation()
+    FROM
+    $table
+    #filterInactiveRows()
+#end
+
+#macro(primaryKeyStrataEstimator)
+    SELECT
+        ## strataIndex: assign each element to a strata by counting the number of trailing zeros in _ibf_key_hash.
+        ## The counting of trailing zeros is performed using this technique:
+        ## https://graphics.stanford.edu/~seander/bithacks.html#ZerosOnRightModLookup
+        BITAND(-_ibf_key_hash, _ibf_key_hash) % 37,
+
+        ## cellIndex: Compute one of the 3 distinct hash indices for the row based on the _ibf_key_hash. To
+        ## ensure each hash function returns a disticnt index, we split the cells into 3 partitions and ensure each
+        ## hash function only outputs indices in one of the partitions.
+        CASE value::integer
+            WHEN 0 THEN ABS(#primaryKeyOnlyIdentityHash() % $primeDivisors[0]) ## + $partitionOffsets[0] => always 0
+            WHEN 1 THEN ABS(#primaryKeyOnlyIdentityHash() % $primeDivisors[1]) + $partitionOffsets[1]
+            WHEN 2 THEN ABS(#primaryKeyOnlyIdentityHash() % $primeDivisors[2]) + $partitionOffsets[2]
+    END
+
+    ## Aggregate the #columns() values into the keySum array of the Cell via XOR
+    #keySumsAggregates()
+
+    ##if($keyLength >= 2) BIT_XOR(cCol3) AS idsum2, #end
+
+    ## Count of rows inserted into each Cell
+
+
+    #primaryKeyOnlyColumns() FROM $table #filterInactiveRows()
+
+
+
+    ## Aggregate all rows in the table into cells
+
+#end
+
+## For PKless tables, set up a temporary table
+## Changes to this macro need to be reflected in the importer template so that the MD5 matches
+#macro(setup $columns)
+        OR REPLACE TEMP TABLE $tempTable
+    AS
+    SELECT DISTINCT
+        MD5_HEX(CONCAT_WS('|'
+            #foreach ($column in $columns), #stringifyNullable($column) #end
+            )) AS $helper.quote($rowHashIdentifier)
+            #foreach ($column in $columns), $helper.quote($column.name) #end
+    FROM $table;
+#end
+
+##
+## Private Helper Macros
+##
+
+### Key Sums
+#macro(keySumsAggregates)
+    #set($end = $primaryKeys.size() - 1)
+    #set($colCount = 0)
+    #foreach($i in [0..$end])
+        #set($keyLength = $keyLengths.get($i))
+        #keySumAggregatesPerKey($keyTypes.get($i), $keyLength,  $colCount)
+        #set($colCount = $colCount + $keyLength)
+    #end
+#end
+
+#macro(keySumAggregatesPerKey $keyType $keyLength $colCount)
+    #if ( $keyType == "Int" || $keyType == "Short" || $keyType == "Long" || $keyType == "BigDecimal")
+        BITXOR_AGG(_ibf_column$colCount
+    #elseif ( $keyType == "String" || $keyType == "Binary" )
+        #set($end = $keyLength - 1 + $colCount)
+        #foreach($i in [$colCount..$end])
+            BITXOR_AGG(_ibf_column$i),
+        #end
+    #end
+#end
+
+### Column Expressions
+#macro(columns $common)
+    #set($end = $primaryKeys.size() - 1)
+    #set($colCount = 0)
+    #foreach($i in [0..$end])
+        #set($keyType = $keyTypes.get($i))
+        #set($primaryKey = $primaryKeys.get($i))
+        #if ( $helper.isNumber($keyType) )
+            #intPkCol($primaryKey, $colCount)
+            #set($colCount = $colCount + 1)
+        #elseif ( $helper.isBinary($keyType) )
+            #set($keyLength = $keyLengths.get($i))
+            #binaryPkCols($primaryKey, $keyLength, $colCount)
+            #set($colCount = $colCount + $keyLength)
+        #elseif ( $helper.isString($keyType) )
+            #set($keyLength = $keyLengths.get($i))
+            #stringPkCols($primaryKey, $keyLength, $colCount)
+            #set($colCount = $colCount + $keyLength)
+        #end
+    #end
+    #rowHash($common) AS _ibf_row_hash
+#end
+
+#macro(primaryKeyOnlyColumns)
+    #set($end = $primaryKeys.size() - 1)
+    #set($colCount = 0)
+    #foreach($i in [0..$end])
+        #set($keyType = $keyTypes.get($i))
+        #set($primaryKey = $primaryKeys.get($i))
+        #if ( $helper.isNumber($keyType) )
+            #intPkCol($primaryKey, $colCount)
+            #set($colCount = $colCount + 1)
+        #elseif ( $helper.isBinary($keyType) )
+            #set($keyLength = $keyLengths.get($i))
+            #binaryPkCols($primaryKey, $keyLength, $colCount)
+            #set($colCount = $colCount + $keyLength)
+        #elseif ( $helper.isString($keyType) )
+            #set($keyLength = $keyLengths.get($i))
+            #stringPkCols($primaryKey, $keyLength, $colCount)
+            #set($colCount = $colCount + $keyLength)
+        #end
+    #end
+    #pkHash()
+#end
+
+#macro(filterInactiveRows)
+    #if ( $syncMode == "Legacy" )
+        WHERE _example_deleted = false
+    #elseif ( $syncMode == "History" )
+        WHERE _example_active = true
+    #else
+        WHERE 1=1
+    #end
+#end
+
+#macro(intPkCol $primaryKey $colCount)
+    $helper.quote($primaryKey) AS _ibf_column$colCount,
+#end
+
+#macro(stringPkCols $primaryKey $keyLength $colCount)
+    #set($strPosition = 1)
+    #set($end = $keyLength - 1 + $colCount)
+    #foreach($i in [$colCount..$end])
+
+        $helper.quote($primaryKey), $strPosition
+        $helper.quote($primaryKey), $strPosition
+        end AS _ibf_column$i
+        #set($strPosition = $strPosition + 8)
+    #end
+#end
+
+#macro(binaryPkCols $primaryKey $keyLength $colCount)
+    #set($strPosition = 1)
+    #set($end = $keyLength - 1 + $colCount)
+    #foreach($i in [$colCount..$end])
+        TO_NUMBER(HEX_ENCODE(HEX_ENCODE(SUBSTRING($helper.quote($primaryKey), $strPosition, 4))), 'XXXXXXXXXXXXXXXXXXXX') AS _ibf_column$i,
+        #set($strPosition = $strPosition + 4)
+    #end
+#end
+
+#macro(rowHash $common)
+    #if($common) #commonDestinationRowHash()
+    #else #syncRowHash()
+    #end
+#end
+
+#macro(syncRowHash)
+    #define($rowRepresentation)
+        CONCAT_WS('|' #foreach ($column in $columns), #stringifyNullable($column)#end )
+    #end
+    #snowflakeHash($rowRepresentation)
+#end
+
+######
+## Stringify any nullable column
+## $column: SnowflakeibfColumnInfo
+######
+#macro(stringifyNullable $column)
+    #if ($column.isAddedSinceLastSync())
+        ## Does column have a default value?
+        #if ($column.getColumnDefaultValue().isPresent())
+TO_CHAR($column.getColumnDefaultValue().get())#else
+''#end
+    #else
+COALESCE(#stringify($column), '')#end
+#end
+
+#macro(stringify $column)
+    #if ($helper.isBinary($column.type))
+    HEX_ENCODE($helper.quote($column.name))
+#elseif($helper.isSpatialType($column.sourceType))
+    ST_ASTEXT($helper.quote($column.name))
+#else
+    TO_CHAR($helper.quote($column.name))
+#end
+#end
+
+#macro(commonDestinationRowHash)
+    #define($rowRepresentation)
+        #commonRowRepresentation()
+    #end
+    #md5_52bit_checksum( $rowRepresentation )
+#end
+
+#macro(commonMd5Hash)
+    MD5(#commonRowRepresentation())
+#end
+
+## $columns can be a set of com.example.ibf.db_compare.ibfCompareColumn or
+## com.example.integrations.snowflake.ibf.SnowflakeibfColumnInfo
+## The FullType property only exists on ibfCompareColumn
+#macro(commonRowRepresentation)
+    CONCAT('' ## Ensure first argument to concat is a string
+    #foreach ($column in $columns)
+            ,
+            #if($column.FullType == "postgres_boolean" || $column.FullType == "postgres_bit")
+                IFF($column.name, 't', 'f')
+            #elseif($column.FullType == "postgres_timestamp_with_time_zone")
+                REPLACE(TO_VARCHAR($column.name, 'YYYY-MM-DD HH24:MI:SS.FF3+TZH'), '+Z', '+00')
+            #elseif($column.FullType == "postgres_money")
+                CONCAT(IFF(sign($column.name) = -1,'-', ''),'$',abs($column.name))
+            #elseif($column.FullType == "postgres_bytea")
+                CONCAT('\\x', lower(TO_VARCHAR($column.name)))
+            #elseif($column.FullType == "postgres_interval")
+                ROUND($column.name)
+            #elseif($column.FullType == "postgres_money")
+                TO_NUMERIC($column.name::numeric,'$99')
+            #elseif($column.FullType == "postgres_point")
+                REPLACE(REPLACE(get_path($column.name,'coordinates'),'[','('), ']',')')
+            #elseif($column.FullType == "postgres_real")
+                ($column.name)::number(38,1)
+            #elseif($column.FullType == "postgres_daterange")
+                CONCAT('[',get_path($column.name, 'start_date'), ',', get_path($column.name, 'end_date'), ')')
+            #elseif($column.FullType == "postgres_tsrange")
+                REPLACE(CONCAT('[',get_path($column.name, 'start_ts'), ',', get_path($column.name, 'end_ts'), ')'), 'T',' ')
+            #elseif($column.FullType == "postgres_numeric")
+                RTRIM($column.name, '0')
+            #elseif($column.FullType == "postgres_double_precision")
+                ROUND($column.name, 5)
+            #else
+        $column.name
+    #end
+    #end
+    )
+#end
+
+#macro(pkHash)
+    #define($pkRepresentation)
+        CONCAT_WS('|'
+            #foreach ($primaryKey in $primaryKeys)
+                , $helper.quote($primaryKey)
+    #end
+        )
+    #end
+    #md5_52bit_checksum($pkRepresentation) AS _ibf_key_hash
+#end
+
+### Hash Functions
+#macro(identityHash)
+    _ibf_row_hash
+#end
+
+#macro(primaryKeyOnlyIdentityHash)
+    _ibf_key_hash
+#end
+
+#macro(md5_52bit_checksum $inner)
+    TO_NUMBER(SUBSTR(MD5($inner), 1, 13), 'XXXXXXXXXXXXXXXX')
+#end
+
+#macro(snowflakeHash $inner)
+    ## For incremental sync, we use the HASH utility function provided by Snowflake [1]. The internals of this function
+    ## are not public, so we are assuming it is stable between syncs.
+    ##
+    ## [1] https://docs.snowflake.com/en/sql-reference/functions/hash.html
+    HASH($inner)
+#end
