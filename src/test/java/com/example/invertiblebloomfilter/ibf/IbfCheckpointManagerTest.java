@@ -33,7 +33,7 @@ public class IbfCheckpointManagerTest {
 
     private static final Duration CHECKPOINT_PERIOD = Duration.ofMinutes(15);
     //Local file name
-    private static final String OBJECT_ID = "165c56bd-d573-4bc2-9cc9-e36d3ed82fd5";
+    public static final String OBJECT_ID = "165c56bd-d573-4bc2-9cc9-e36d3ed82fd5";
     private static final String IBF_LOCAL_DIR = "IbfLocal";
 
 
@@ -99,7 +99,8 @@ public class IbfCheckpointManagerTest {
         try {
             OracleIbfAdapter oracleIbfAdapter = buildOracleIbfAdapter();
             IbfPersistentStorage ibfPersistentStorage = buildIbfPersistentStorage();
-            IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(oracleIbfAdapter, ibfPersistentStorage, OBJECT_ID);
+            IbfCheckpointManager ibfCheckpointManager = new IbfCheckpointManager(oracleIbfAdapter,
+                    ibfPersistentStorage, OBJECT_ID);
 
             if (!checkLocalStorageFileHaveData(IBF_LOCAL_DIR + "/" + OBJECT_ID)) {
                 ibfCheckpointManager.simulateResetWithEmptyIBF();
@@ -154,7 +155,7 @@ public class IbfCheckpointManagerTest {
         return false;
     }
 
-    private static OracleIbfAdapter buildOracleIbfAdapter() {
+    public static OracleIbfAdapter buildOracleIbfAdapter() {
         DataSource dataSource = buildDataSource();
 
         TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
@@ -174,7 +175,7 @@ public class IbfCheckpointManagerTest {
         return oracleIbfAdapter;
     }
 
-    private static List<OracleColumnInfo> buildColumns(TableRef tableRef) {
+     static List<OracleColumnInfo> buildColumns(TableRef tableRef) {
 
         Column stringColumn = new Column("STRING_COLUMN", DataType.String, true);
         Column numberColumn = new Column("NUMBER_COLUMN", DataType.Long, true);
@@ -199,7 +200,7 @@ public class IbfCheckpointManagerTest {
 
     }
 
-    private static IbfPersistentStorage buildIbfPersistentStorage() {
+    public static IbfPersistentStorage buildIbfPersistentStorage() {
         File file = new File(IBF_LOCAL_DIR);
         Path path = file.toPath();
         log.info("Using local ibf storage location " + path);
