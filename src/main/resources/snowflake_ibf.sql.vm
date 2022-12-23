@@ -18,9 +18,9 @@
             WHEN 0 THEN ABS(#identityHash() % $primeDivisors[0]) ## + $partitionOffsets[0] => always 0
             WHEN 1 THEN ABS(#identityHash() % $primeDivisors[1]) + $partitionOffsets[1]
             WHEN 2 THEN ABS(#identityHash() % $primeDivisors[2]) + $partitionOffsets[2]
-    END
+        END
 
-    ## Aggregate the #columns() values into the keySum array of the Cell via XOR
+## Aggregate the #columns() values into the keySum array of the Cell via XOR
     #keySumsAggregates()
 
     ##if($keyLength >= 2) BITXOR(cCol3) AS idsum2, #end
@@ -43,7 +43,7 @@
             WHEN 0 THEN ABS(#identityHash() % $primeDivisors[0]) ## + $partitionOffsets[0] => always 0
             WHEN 1 THEN ABS(#identityHash() % $primeDivisors[1]) + $partitionOffsets[1]
             WHEN 2 THEN ABS(#identityHash() % $primeDivisors[2]) + $partitionOffsets[2]
-    END
+
 
     ## Aggregate the #columns() values into the keySum array of the Cell via XOR
     #keySumsAggregates()
@@ -90,9 +90,9 @@
             WHEN 0 THEN ABS(#primaryKeyOnlyIdentityHash() % $primeDivisors[0]) ## + $partitionOffsets[0] => always 0
             WHEN 1 THEN ABS(#primaryKeyOnlyIdentityHash() % $primeDivisors[1]) + $partitionOffsets[1]
             WHEN 2 THEN ABS(#primaryKeyOnlyIdentityHash() % $primeDivisors[2]) + $partitionOffsets[2]
-    END
+        END
 
-    ## Aggregate the #columns() values into the keySum array of the Cell via XOR
+## Aggregate the #columns() values into the keySum array of the Cell via XOR
     #keySumsAggregates()
 
     ##if($keyLength >= 2) BIT_XOR(cCol3) AS idsum2, #end
@@ -111,8 +111,8 @@
 ## For PKless tables, set up a temporary table
 ## Changes to this macro need to be reflected in the importer template so that the MD5 matches
 #macro(setup $columns)
-        OR REPLACE TEMP TABLE $tempTable
-    AS
+    $tempTable
+
     SELECT DISTINCT
         MD5_HEX(CONCAT_WS('|'
             #foreach ($column in $columns), #stringifyNullable($column) #end
