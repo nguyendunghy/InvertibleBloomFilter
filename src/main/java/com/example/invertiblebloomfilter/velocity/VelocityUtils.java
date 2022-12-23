@@ -16,7 +16,9 @@ import java.util.Map;
 
 public class VelocityUtils {
 
-
+    public static String generateIBFQuery(String templateFilename, HashMap<String,Object> hashMap){
+        return VelocityUtils.generate(templateFilename, hashMap);
+    }
 
     public static String generateIBFQuery(String templateFilename, String tableName, OracleColumnInfo[] columnNames,
                                           String outputFunction) {

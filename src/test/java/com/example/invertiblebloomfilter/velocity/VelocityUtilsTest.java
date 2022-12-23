@@ -5,6 +5,7 @@ import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,6 +64,38 @@ public class VelocityUtilsTest {
         Assert.assertNotNull(ibfQuery);
     }
 
+    @Test
+    void testOracleIbfSqlGeneration(){
+        TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
+        OracleColumnInfo[] columns = buildColumns(tableRef).toArray(new OracleColumnInfo[]{});
+        HashMap<String,Object> hashMap = new HashMap<>();
+        hashMap.put("tableColumns", columns);
+        hashMap.put("keyCount", columns.length);
+        hashMap.put("keyLength", columns.length);
+        hashMap.put("columns", columns);
+        hashMap.put("table", tableRef.name);
+        hashMap.put("helper", new OracleIBFQueryBuilder.TemplateHelper());
+        long[] divisors = OneHashingBloomFilterUtils.primeDivisors(100);
+        hashMap.put("primeDivisors", divisors);
+        hashMap.put("cellsCount", OneHashingBloomFilterUtils.totalCellCount(divisors));
+        hashMap.put("partitionOffsets", OneHashingBloomFilterUtils.partitionOffsets(divisors));
+        hashMap.put("dateNumberFormat", "DD-MM-YYYY");
+        hashMap.put("useConnectorAggregation", false);
+        hashMap.put("useXOR", false);
+        hashMap.put("moduloDivisor", 1000);
+        hashMap.put("useLegacyRowHash", true);
+        hashMap.put("fastIbfQuery", false);
+        hashMap.put("oracleVersion", 12);
+
+
+        hashMap.put("output", "#invertibleBloomFilter()");
+
+        String ibfQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm",hashMap);
+
+        System.out.println(ibfQuery);
+        Assert.assertNotNull(ibfQuery);
+    }
+
     private List<OracleColumnInfo> buildColumns(TableRef tableRef) {
 
         Column stringColumn = new Column("STRING_COLUMN", DataType.String, true);
@@ -81,18 +114,18 @@ public class VelocityUtilsTest {
 
         OracleColumnInfo stringOracleColumnInfo = new OracleColumnInfo(oracleStringColumn, stringColumn);
         stringOracleColumnInfo.parseAndSetDataDefaultExpression();
-        stringOracleColumnInfo.setAddedSinceLastSync(true);
+        stringOracleColumnInfo.setAddedSinceLastSync(false);
 
         OracleColumnInfo numberOracleColumnInfo = new OracleColumnInfo(oracleNumberColumn, numberColumn);
-        numberOracleColumnInfo.setAddedSinceLastSync(true);
+        numberOracleColumnInfo.setAddedSinceLastSync(false);
         numberOracleColumnInfo.parseAndSetDataDefaultExpression();
 
         OracleColumnInfo dateOracleColumnInfo = new OracleColumnInfo(oracleDateColumn, dateColumn);
-        dateOracleColumnInfo.setAddedSinceLastSync(true);
+        dateOracleColumnInfo.setAddedSinceLastSync(false);
         dateOracleColumnInfo.parseAndSetDataDefaultExpression();
 
         OracleColumnInfo clobOracleColumnInfo = new OracleColumnInfo(oracleClobColumn, clobColumn);
-        clobOracleColumnInfo.setAddedSinceLastSync(true);
+        clobOracleColumnInfo.setAddedSinceLastSync(false);
         clobOracleColumnInfo.parseAndSetDataDefaultExpression();
 
         return Arrays.asList(stringOracleColumnInfo, numberOracleColumnInfo, dateOracleColumnInfo, clobOracleColumnInfo);
