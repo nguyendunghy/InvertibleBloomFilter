@@ -10,9 +10,14 @@ public interface IbfDataRepo {
 
     void streamIbfData(InvertibleBloomFilter invertibleBloomFilter, String... query) throws Exception;
 
+    void streamDbAggIbfData(InvertibleBloomFilter invertibleBloomFilter, String... query) throws Exception;
+
     List<IbfData> findAll();
 
     List<DataTable> retrieveAllData(String rowHash, String... query);
+
+    List<DataTable> retrieveDbAggAllData(String rowHash, String... query);
+
 
     List<DataTable> retrieveAllHistoryData(String rowHash, String... query);
 

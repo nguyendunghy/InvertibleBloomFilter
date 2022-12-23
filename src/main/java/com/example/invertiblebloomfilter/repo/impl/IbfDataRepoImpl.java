@@ -1,15 +1,18 @@
 package com.example.invertiblebloomfilter.repo.impl;
 
+import com.example.invertiblebloomfilter.entity.DBAggIbfData;
 import com.example.invertiblebloomfilter.entity.DataTable;
 import com.example.invertiblebloomfilter.entity.IbfData;
-import com.example.invertiblebloomfilter.ibf.InvertibleBloomFilter;
+import com.example.invertiblebloomfilter.ibf.*;
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
 import com.example.invertiblebloomfilter.velocity.VelocityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static com.example.invertiblebloomfilter.repo.Sql.*;
 
@@ -57,6 +60,37 @@ public class IbfDataRepoImpl implements IbfDataRepo {
     }
 
     @Override
+    public void streamDbAggIbfData(InvertibleBloomFilter invertibleBloomFilter, String... query) throws Exception {
+        try {
+            String ibfQuery;
+            if (query != null && query.length != 0) {
+                ibfQuery = query[0];
+            } else {
+                TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
+                OracleColumnInfo[] columns = buildColumns(tableRef).toArray(new OracleColumnInfo[]{});
+                ibfQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef, columns);
+            }
+
+            jdbcTemplate.query(ibfQuery, resultSet -> {
+
+                do {
+                    DBAggIbfData row = new DBAggIbfData(
+                            resultSet.getInt("_ibf_cell_index"),
+                            resultSet.getLong("_ibf_row_hash_number"),
+                            resultSet.getLong("count")
+                            );
+                    invertibleBloomFilter.insert(row);
+                } while (resultSet.next());
+
+                System.out.println(invertibleBloomFilter);
+            });
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    @Override
     public List<IbfData> findAll() {
         return jdbcTemplate.query(
                 IBF_QUERY,
@@ -87,6 +121,11 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                         rs.getString("DATE_COLUMN"),
                         rs.getString("CLOB_COLUMN")
                 ));
+    }
+
+    @Override
+    public List<DataTable> retrieveDbAggAllData(String rowHash, String... query) {
+        return null;
     }
 
     @Override
@@ -126,5 +165,41 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 dataTable.getStringColumn(), dataTable.getNumberColumn(), dataTable.getDateColumn(), dataTable.getClobColumn());
     }
 
+
+    private List<OracleColumnInfo> buildColumns(TableRef tableRef) {
+
+        Column stringColumn = new Column("STRING_COLUMN", DataType.String, true);
+        Column numberColumn = new Column("NUMBER_COLUMN", DataType.Long, true);
+        Column dateColumn = new Column("DATE_COLUMN", DataType.LocalDate, true);
+        Column clobColumn = new Column("CLOB_COLUMN", DataType.String, true);
+
+        OracleColumn oracleStringColumn = new OracleColumn("STRING_COLUMN", OracleType.create("VARCHAR"), true, tableRef, Optional.empty());
+        oracleStringColumn.setDataDefault(Optional.of("|"));
+        OracleColumn oracleNumberColumn = new OracleColumn("NUMBER_COLUMN", OracleType.create("NUMBER"), true, tableRef, Optional.empty());
+        oracleNumberColumn.setDataDefault(Optional.of("0"));
+        OracleColumn oracleDateColumn = new OracleColumn("DATE_COLUMN", OracleType.create("DATE"), true, tableRef, Optional.empty());
+        oracleDateColumn.setDataDefault(Optional.of("15-12-2022"));
+        OracleColumn oracleClobColumn = new OracleColumn("CLOB_COLUMN", OracleType.create("CLOB", true), true, tableRef, Optional.empty());
+        oracleDateColumn.setDataDefault(Optional.of("|"));
+
+        OracleColumnInfo stringOracleColumnInfo = new OracleColumnInfo(oracleStringColumn, stringColumn);
+        stringOracleColumnInfo.parseAndSetDataDefaultExpression();
+        stringOracleColumnInfo.setAddedSinceLastSync(false);
+
+        OracleColumnInfo numberOracleColumnInfo = new OracleColumnInfo(oracleNumberColumn, numberColumn);
+        numberOracleColumnInfo.setAddedSinceLastSync(false);
+        numberOracleColumnInfo.parseAndSetDataDefaultExpression();
+
+        OracleColumnInfo dateOracleColumnInfo = new OracleColumnInfo(oracleDateColumn, dateColumn);
+        dateOracleColumnInfo.setAddedSinceLastSync(false);
+        dateOracleColumnInfo.parseAndSetDataDefaultExpression();
+
+        OracleColumnInfo clobOracleColumnInfo = new OracleColumnInfo(oracleClobColumn, clobColumn);
+        clobOracleColumnInfo.setAddedSinceLastSync(false);
+        clobOracleColumnInfo.parseAndSetDataDefaultExpression();
+
+        return Arrays.asList(stringOracleColumnInfo, numberOracleColumnInfo, dateOracleColumnInfo, clobOracleColumnInfo);
+
+    }
 }
 

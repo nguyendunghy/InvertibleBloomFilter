@@ -68,29 +68,7 @@ public class VelocityUtilsTest {
     void testOracleIbfSqlGeneration(){
         TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
         OracleColumnInfo[] columns = buildColumns(tableRef).toArray(new OracleColumnInfo[]{});
-        HashMap<String,Object> hashMap = new HashMap<>();
-        hashMap.put("tableColumns", columns);
-        hashMap.put("keyCount", columns.length);
-        hashMap.put("keyLength", columns.length);
-        hashMap.put("columns", columns);
-        hashMap.put("table", tableRef.name);
-        hashMap.put("helper", new OracleIBFQueryBuilder.TemplateHelper());
-        long[] divisors = OneHashingBloomFilterUtils.primeDivisors(100);
-        hashMap.put("primeDivisors", divisors);
-        hashMap.put("cellsCount", OneHashingBloomFilterUtils.totalCellCount(divisors));
-        hashMap.put("partitionOffsets", OneHashingBloomFilterUtils.partitionOffsets(divisors));
-        hashMap.put("dateNumberFormat", "DD-MM-YYYY");
-        hashMap.put("useConnectorAggregation", false);
-        hashMap.put("useXOR", false);
-        hashMap.put("moduloDivisor", 1000);
-        hashMap.put("useLegacyRowHash", true);
-        hashMap.put("fastIbfQuery", false);
-        hashMap.put("oracleVersion", 12);
-
-
-        hashMap.put("output", "#invertibleBloomFilter()");
-
-        String ibfQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm",hashMap);
+        String ibfQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm",tableRef,columns);
 
         System.out.println(ibfQuery);
         Assert.assertNotNull(ibfQuery);

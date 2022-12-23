@@ -2,13 +2,9 @@
 
  Template parameters:
  $tableColumns: array of com.example.integrations.oracle.meta.OracleColumnInfo
- $keyCount: size of $tableColumns array
- $keyLength: int total number of columns that should represent the primary keys
  $table: TableRef
- $columns: collection of com.example.integrations.oracle.meta.OracleColumnInfo
  $helper: com.example.integrations.oracle.ibf.OracleIBFQueryBuilder.TemplateHelper
  $primeDivisors: long[3] Provided by ibfDbUtils
- $cellsCount: int - Total number of hash cells - Provided by ibfDbUtils
  $partitionOffsets: long[3] - Provided by ibfDbUtils
  $dateNumberFormat: formatter to read date as a number
  *#
@@ -111,7 +107,7 @@ SELECT #columns() FROM $table
 
 #macro(legacyRowHash)
     #define($rowRepresentation)
-        #foreach ($column in $columns)
+        #foreach ($column in $tableColumns)
             #if ( $foreach.count > 1 ) || '|' || #end
             #stringifyNullable($column)
         #end
@@ -122,17 +118,17 @@ SELECT #columns() FROM $table
 #macro(defaultRowHash)
     #define($rowRepresentation)
         #set($cnt = 0)
-        #if($columns.size() > 120)
+        #if($tableColumns.size() > 120)
             #set($endCnt = 120)
         #else
-            #set($endCnt = $columns.size() - 1)
+            #set($endCnt = $tableColumns.size() - 1)
         #end
-        #set($loops = $columns.size() / 121)
+        #set($loops = $tableColumns.size() / 121)
         #foreach($loop in [0..$loops])
             #define($colBatch)
                 #foreach($i in [$cnt..$endCnt])
                     #define($stringifiedCol)
-                        #stringifyNullable($columns.get($i))
+                        #stringifyNullable($tableColumns.get($i))
                     #end
                     #md5($stringifiedCol)
                     #if($i < $endCnt)
@@ -142,11 +138,11 @@ SELECT #columns() FROM $table
             #end
             #md5($colBatch)
             #set($cnt = $endCnt + 1)
-            #if($endCnt + 121 > $columns.size())
-                #if($endCnt < $columns.size() - 1)
+            #if($endCnt + 121 > $tableColumns.size())
+                #if($endCnt < $tableColumns.size() - 1)
                 ||
             #end
-                #set($endCnt = $columns.size() - 1)
+                #set($endCnt = $tableColumns.size() - 1)
             #else
             ||
             #set($endCnt = $endCnt + 121)

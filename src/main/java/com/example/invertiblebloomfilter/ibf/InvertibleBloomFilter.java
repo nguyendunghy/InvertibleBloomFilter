@@ -1,5 +1,6 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.example.invertiblebloomfilter.entity.DBAggIbfData;
 import com.example.invertiblebloomfilter.entity.IbfData;
 import io.netty.buffer.ByteBuf;
 import org.apache.commons.lang3.StringUtils;
@@ -31,8 +32,6 @@ public class InvertibleBloomFilter {
     public void setCells(Cell[] cells) {
         this.cells = cells;
     }
-
-
 
 
     public void setDivisors(long[] divisors) {
@@ -102,11 +101,25 @@ public class InvertibleBloomFilter {
         }
     }
 
+    public void add(int cellIndex, Cell cell) {
+        getCell(cellIndex).add(cell);
+    }
 
     public void insert(IbfData row) {
         LongLong rowHashNumber = row.getRowHash();
         long[] hashNumbers = new long[]{};
         insert(hashNumbers, rowHashNumber);
+    }
+
+
+    public void insert(DBAggIbfData row) {
+        int cellIndex = row.getCellIndex();
+        LongLong rowHashNumber = row.getRowHash();
+        long count = row.getCount();
+        long[] hashNumbers = new long[]{};
+
+        Cell cell = new Cell(hashNumbers, rowHashNumber, count);
+        add(cellIndex, cell);
     }
 
     /**

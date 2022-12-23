@@ -1,9 +1,6 @@
 package com.example.invertiblebloomfilter.velocity;
 
-import com.example.invertiblebloomfilter.ibf.OneHashingBloomFilterUtils;
-import com.example.invertiblebloomfilter.ibf.OracleColumnInfo;
-import com.example.invertiblebloomfilter.ibf.OracleIBFQueryBuilder;
-import com.example.invertiblebloomfilter.ibf.OracleType;
+import com.example.invertiblebloomfilter.ibf.*;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -16,7 +13,22 @@ import java.util.Map;
 
 public class VelocityUtils {
 
-    public static String generateIBFQuery(String templateFilename, HashMap<String,Object> hashMap){
+    public static String generateIBFQuery(String templateFilename,TableRef tableRef, OracleColumnInfo[] columns){
+        HashMap<String,Object> hashMap = new HashMap<>();
+        hashMap.put("tableColumns", columns);
+        hashMap.put("table", tableRef.name);
+        hashMap.put("helper", new OracleIBFQueryBuilder.TemplateHelper());
+        long[] divisors = OneHashingBloomFilterUtils.primeDivisors(100);
+        hashMap.put("primeDivisors", divisors);
+        hashMap.put("partitionOffsets", OneHashingBloomFilterUtils.partitionOffsets(divisors));
+        hashMap.put("dateNumberFormat", "DD-MM-YYYY");
+        hashMap.put("useConnectorAggregation", false);
+        hashMap.put("useXOR", false);
+        hashMap.put("useLegacyRowHash", true);
+        hashMap.put("fastIbfQuery", true);
+        hashMap.put("oracleVersion", 12);
+        hashMap.put("output", "#invertibleBloomFilter()");
+
         return VelocityUtils.generate(templateFilename, hashMap);
     }
 

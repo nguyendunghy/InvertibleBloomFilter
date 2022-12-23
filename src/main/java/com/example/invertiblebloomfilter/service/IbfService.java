@@ -11,6 +11,7 @@ import com.example.invertiblebloomfilter.repo.CellRepo;
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
 import com.example.invertiblebloomfilter.repo.IbfRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -30,9 +31,16 @@ public class IbfService {
     @Autowired
     private CellRepo cellRepo;
 
+    @Value("${ibf.db.aggregator}")
+    private boolean ibfDbAgg;
+
     public void streamIbfData(InvertibleBloomFilter invertibleBloomFilter) {
         try {
-            ibfDataRepo.streamIbfData(invertibleBloomFilter);
+            if (ibfDbAgg) {
+                ibfDataRepo.streamDbAggIbfData(invertibleBloomFilter);
+            } else {
+                ibfDataRepo.streamIbfData(invertibleBloomFilter);
+            }
             Thread.sleep(3000);
         } catch (Exception e) {
             e.printStackTrace();
@@ -81,7 +89,7 @@ public class IbfService {
 
 
     private void saveCellEntities(InvertibleBloomFilter ibf, Long ibfId) {
-        Long maxId = cellRepo.getMaxId() ;
+        Long maxId = cellRepo.getMaxId();
         int count = 0;
         for (Cell cell : ibf.getCells()) {
             CellEntity cellEntity = new CellEntity();
@@ -99,13 +107,16 @@ public class IbfService {
     }
 
 
-
     public List<IbfData> findAll() {
         return ibfDataRepo.findAll();
     }
 
     public List<DataTable> retrieveAllData(String rowHash) {
-        return ibfDataRepo.retrieveAllData(rowHash);
+        if (ibfDbAgg) {
+            return ibfDataRepo.retrieveDbAggAllData(rowHash);
+        } else {
+            return ibfDataRepo.retrieveAllData(rowHash);
+        }
     }
 
     public List<DataTable> retrieveAllHistoryData(String rowHash) {
