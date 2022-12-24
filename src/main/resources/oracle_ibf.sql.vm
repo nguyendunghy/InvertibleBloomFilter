@@ -18,6 +18,15 @@
     #end
 #end
 
+#macro(retrieveData)
+    SELECT *
+    FROM (
+         SELECT #columnsWithoutHash()
+         FROM $table
+        )
+    WHERE "_ibf_row_hash" = ?
+#end
+
 #macro(invertibleBloomFilterWithDBAggregation)
     SELECT "_ibf_cell_index",
         #aggregate("_ibf_row_hash"),
@@ -51,10 +60,17 @@ SELECT #columns() FROM $table
         #define($stringifiedColumn)
             #stringifyNullable($column)
         #end
-        #if($i > 0),#end #md5_60bits($stringifiedColumn)
-                        AS "_ibf_column$i"
+        #if($i > 0),#end #md5_60bits($stringifiedColumn) AS "_ibf_column$i"
     #end
+#end
 
+#macro(columnsWithoutHash)
+    #createRowHashCol() AS "_ibf_row_hash",
+    #set($endIndex = $tableColumns.size() - 1)
+    #foreach($i in [0..$endIndex])
+        #set($column = $tableColumns[$i])
+        #if($i > 0),#end #stringifyNullable($column) AS "_ibf_column$i"
+    #end
 #end
 
 #macro(stringifyNullable $column)

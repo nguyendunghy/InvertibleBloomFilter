@@ -101,9 +101,6 @@ public class InvertibleBloomFilter {
         }
     }
 
-    public void add(int cellIndex, Cell cell) {
-        getCell(cellIndex).add(cell);
-    }
 
     public void insert(IbfData row) {
         LongLong rowHashNumber = row.getRowHash();
@@ -119,7 +116,7 @@ public class InvertibleBloomFilter {
         long[] hashNumbers = new long[]{};
 
         Cell cell = new Cell(hashNumbers, rowHashNumber, count);
-        add(cellIndex, cell);
+        this.cells[cellIndex] = cell;
     }
 
     /**

@@ -120,7 +120,11 @@ public class IbfService {
     }
 
     public List<DataTable> retrieveAllHistoryData(String rowHash) {
-        return ibfDataRepo.retrieveAllHistoryData(rowHash);
+        if (ibfDbAgg) {
+            return ibfDataRepo.retrieveDbAggAllHistoryData(rowHash);
+        } else {
+            return ibfDataRepo.retrieveAllHistoryData(rowHash);
+        }
     }
 
 }

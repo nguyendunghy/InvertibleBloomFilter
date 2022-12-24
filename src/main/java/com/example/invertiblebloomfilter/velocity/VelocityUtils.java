@@ -13,21 +13,20 @@ import java.util.Map;
 
 public class VelocityUtils {
 
-    public static String generateIBFQuery(String templateFilename,TableRef tableRef, OracleColumnInfo[] columns){
+    public static String generateIBFQuery(String templateFilename,TableRef tableRef, OracleColumnInfo[] columns, long[] divisors, String outputFunc){
         HashMap<String,Object> hashMap = new HashMap<>();
         hashMap.put("tableColumns", columns);
         hashMap.put("table", tableRef.name);
         hashMap.put("helper", new OracleIBFQueryBuilder.TemplateHelper());
-        long[] divisors = OneHashingBloomFilterUtils.primeDivisors(100);
         hashMap.put("primeDivisors", divisors);
         hashMap.put("partitionOffsets", OneHashingBloomFilterUtils.partitionOffsets(divisors));
         hashMap.put("dateNumberFormat", "DD-MM-YYYY");
         hashMap.put("useConnectorAggregation", false);
         hashMap.put("useXOR", false);
         hashMap.put("useLegacyRowHash", true);
-        hashMap.put("fastIbfQuery", true);
+        hashMap.put("fastIbfQuery", false);
         hashMap.put("oracleVersion", 12);
-        hashMap.put("output", "#invertibleBloomFilter()");
+        hashMap.put("output", "#" + outputFunc + "()");
 
         return VelocityUtils.generate(templateFilename, hashMap);
     }

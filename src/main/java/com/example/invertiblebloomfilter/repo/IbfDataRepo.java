@@ -21,6 +21,9 @@ public interface IbfDataRepo {
 
     List<DataTable> retrieveAllHistoryData(String rowHash, String... query);
 
+    List<DataTable> retrieveDbAggAllHistoryData(String rowHash, String... query);
+
+
     void save(DataTable dataTable);
 
     void delete(DataTable dataTable);

@@ -65,10 +65,23 @@ public class VelocityUtilsTest {
     }
 
     @Test
-    void testOracleIbfSqlGeneration(){
+    void testOracleIbfSqlGeneration() {
         TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
         OracleColumnInfo[] columns = buildColumns(tableRef).toArray(new OracleColumnInfo[]{});
-        String ibfQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm",tableRef,columns);
+        String ibfQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef,
+                columns, new long[]{37, 41, 47},"invertibleBloomFilter");
+
+        System.out.println(ibfQuery);
+        Assert.assertNotNull(ibfQuery);
+    }
+
+
+    @Test
+    void testOracleRetrieveSqlGeneration() {
+        TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
+        OracleColumnInfo[] columns = buildColumns(tableRef).toArray(new OracleColumnInfo[]{});
+        String ibfQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef,
+                columns, new long[]{37, 41, 47},"retrieveData");
 
         System.out.println(ibfQuery);
         Assert.assertNotNull(ibfQuery);

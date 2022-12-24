@@ -68,7 +68,8 @@ public class IbfDataRepoImpl implements IbfDataRepo {
             } else {
                 TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
                 OracleColumnInfo[] columns = buildColumns(tableRef).toArray(new OracleColumnInfo[]{});
-                ibfQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef, columns);
+                ibfQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef, columns,
+                        invertibleBloomFilter.getDivisors(), "invertibleBloomFilter");
             }
 
             jdbcTemplate.query(ibfQuery, resultSet -> {
@@ -78,7 +79,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                             resultSet.getInt("_ibf_cell_index"),
                             resultSet.getLong("_ibf_row_hash_number"),
                             resultSet.getLong("count")
-                            );
+                    );
                     invertibleBloomFilter.insert(row);
                 } while (resultSet.next());
 
@@ -125,7 +126,23 @@ public class IbfDataRepoImpl implements IbfDataRepo {
 
     @Override
     public List<DataTable> retrieveDbAggAllData(String rowHash, String... query) {
-        return null;
+        String retrieveDataQuery;
+        if (query != null && query.length != 0) {
+            retrieveDataQuery = query[0];
+        } else {
+            TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
+            OracleColumnInfo[] columns = buildColumns(tableRef).toArray(new OracleColumnInfo[]{});
+            retrieveDataQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef,
+                    columns, new long[]{}, "retrieveData");
+        }
+        return jdbcTemplate.query(retrieveDataQuery, new Object[]{rowHash}, (rs, rowNum) ->
+                new DataTable(
+                        rs.getString("_ibf_row_hash"),
+                        rs.getString("_ibf_column0"),
+                        rs.getString("_ibf_column1"),
+                        rs.getString("_ibf_column2"),
+                        rs.getString("_ibf_column3")
+                ));
     }
 
     @Override
@@ -150,6 +167,29 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                         rs.getString("NUMBER_COLUMN"),
                         rs.getString("DATE_COLUMN"),
                         rs.getString("CLOB_COLUMN")
+                ));
+    }
+
+    @Override
+    public List<DataTable> retrieveDbAggAllHistoryData(String rowHash, String... query) {
+        String retrieveHistoryDataQuery;
+
+        if (query != null && query.length != 0) {
+            retrieveHistoryDataQuery = query[0];
+        } else {
+            TableRef tableRef = new TableRef("JOHN", "IBF_DATA_HISTORY");
+            OracleColumnInfo[] columns = buildColumns(tableRef).toArray(new OracleColumnInfo[]{});
+            retrieveHistoryDataQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef,
+                    columns, new long[]{}, "retrieveData");
+        }
+
+        return jdbcTemplate.query(retrieveHistoryDataQuery, new Object[]{rowHash}, (rs, rowNum) ->
+                new DataTable(
+                        rs.getString("_ibf_row_hash"),
+                        rs.getString("_ibf_column0"),
+                        rs.getString("_ibf_column1"),
+                        rs.getString("_ibf_column2"),
+                        rs.getString("_ibf_column3")
                 ));
     }
 
