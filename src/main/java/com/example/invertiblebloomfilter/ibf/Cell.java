@@ -12,6 +12,8 @@ public class Cell {
     private long[] keySums;
     private long count;
 
+    private boolean ibfDbAgg = true;
+
     /**
      * Construct a new cell from the provided values and hash function. The checkSumHash
      *
@@ -72,9 +74,9 @@ public class Cell {
      */
     public void insert(long[] keySums, LongLong rowHashSum) {
         for (int i = 0; i < keySums.length; i++) {
-            this.keySums[i] ^= keySums[i];
+            this.keySums[i] = aggregate(this.keySums[i], keySums[i], true);
         }
-        this.rowHashSum.xor(rowHashSum);
+        this.rowHashSum.aggregate(rowHashSum, true);
         count++;
     }
 
@@ -85,9 +87,9 @@ public class Cell {
      */
     public void remove(long[] keySums, LongLong rowHashSum) {
         for (int i = 0; i < keySums.length; i++) {
-            this.keySums[i] ^= keySums[i];
+            this.keySums[i] = aggregate(this.keySums[i], keySums[i], false);
         }
-        this.rowHashSum.xor(rowHashSum);
+        this.rowHashSum.aggregate(rowHashSum, false);
         count--;
     }
 
@@ -99,9 +101,9 @@ public class Cell {
      */
     public void add(Cell other) {
         for (int i = 0; i < other.keySums.length; i++) {
-            this.keySums[i] ^= other.keySums[i];
+            this.keySums[i] = aggregate(this.keySums[i], other.keySums[i], true);
         }
-        this.rowHashSum.xor(other.rowHashSum);
+        this.rowHashSum.aggregate(other.rowHashSum, true);
         count += other.count;
     }
 
@@ -113,10 +115,24 @@ public class Cell {
      */
     public void subtract(Cell other) {
         for (int i = 0; i < other.keySums.length; i++) {
-            this.keySums[i] ^= other.keySums[i];
+            this.keySums[i] = aggregate(this.keySums[i], other.keySums[i], false);
         }
-        this.rowHashSum.xor(other.rowHashSum);
+        this.rowHashSum.aggregate(other.rowHashSum, false);
         this.count -= other.count;
+    }
+
+
+    private long aggregate(long x, long y, boolean insert) {
+        if (ibfDbAgg) {
+            return insert ? x + y : x - y;
+        }
+
+        return x ^ y;
+    }
+
+
+    public void setIbfDbAgg(boolean ibfDbAgg) {
+        this.ibfDbAgg = ibfDbAgg;
     }
 
     public long[] keySums() {

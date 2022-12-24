@@ -12,6 +12,20 @@ import lombok.*;
 public class LongLong {
     private String value;
 
+    private boolean ibfDbAgg = true;
+
+    public LongLong(String value) {
+        if (value == null || value.isEmpty()) {
+            value = "0";
+        }
+        this.value = value;
+        this.trimLeftZero();
+    }
+
+    public boolean isIbfDbAgg() {
+        return ibfDbAgg;
+    }
+
     @JsonIgnore
     public boolean isEmpty() {
         if (value == null || value.isEmpty()) {
@@ -29,19 +43,222 @@ public class LongLong {
 
 
     public long longValue() {
-        if(value == null){
+        if (value == null) {
             return 0;
         }
         return (long) value.hashCode();
     }
 
-    public LongLong copy(){
+    public LongLong copy() {
         return new LongLong(this.value);
+    }
+
+    public static LongLong sum(LongLong a, LongLong b) {
+        LongLong x = a.copy();
+        LongLong y = b.copy();
+
+        if (y == null || y.isEmpty()) {
+            return x;
+        }
+
+        if (x.isEmpty()) {
+            x.value = y.value;
+            return x;
+        }
+
+        int maxLength = Integer.max(x.value.length(), y.value.length());
+
+        String[] tempValue = lpadZero(x.value, maxLength).split("");
+        String[] tempX = lpadZero(y.value, maxLength).split("");
+
+        int memory = 0;
+        for (int i = 0; i < tempValue.length; i++) {
+            int tempSum = Integer.parseInt(tempValue[i], 16) + Integer.parseInt(tempX[i], 16) + memory;
+            memory = tempSum / 16;
+            tempValue[i] = Integer.toHexString(tempSum % 16);
+        }
+
+        x.value = String.join("", tempValue).toUpperCase();
+        if (memory != 0) {
+            x.value = Integer.toHexString(memory % 16).toUpperCase() + x.value;
+        }
+        return x;
+    }
+
+    public static String lpadZero(String x, int targetLen) {
+        if (x == null) {
+            x = "";
+        }
+
+        if (x.length() >= targetLen) {
+            return x;
+        }
+
+        for (int i = x.length(); i < targetLen; i++) {
+            x = "0" + x;
+        }
+        return x;
+    }
+
+    public static LongLong subtract(LongLong a, LongLong b) {
+        LongLong x = a.copy();
+        LongLong y = b.copy();
+
+        if (y == null || y.isEmpty()) {
+            return x;
+        }
+
+        if (x.isEmpty()) {
+            x.value = y.changeSign().getValue();
+            return x;
+        }
+
+        if (x.isNegativeNumber()) {
+            if (y.isNegativeNumber()) {
+                LongLong temp = subtract2Positive(y.changeSign(), x.changeSign());
+                x.value = temp.getValue();
+                return x;
+            } else {
+                LongLong temp = sum(x.changeSign(), y);
+                x.value = temp.changeSign().getValue();
+                return x;
+            }
+        } else {
+            if (y.isNegativeNumber()) {
+                LongLong temp = sum(x, y.changeSign());
+                x.value = temp.getValue();
+                return x;
+            } else {
+                LongLong temp = subtract2Positive(x, y);
+                x.value = temp.getValue();
+                return x;
+            }
+        }
+    }
+
+    public static LongLong subtract2Positive(LongLong a, LongLong b) {
+        LongLong x = a.copy();
+        LongLong y = b.copy();
+
+        boolean compare = compare2Positive(x, y);
+
+        LongLong bigger = compare ? x : y;
+        LongLong smaller = compare ? y : x;
+
+        bigger.trimLeftZero();
+        smaller.trimLeftZero();
+
+        String[] biggerArr = bigger.getValue().split("");
+        String[] smallerAgg = smaller.getValue().split("");
+
+        int memory = 0;
+        for (int i = 0; i < biggerArr.length; i++) {
+            int subtrahend = Integer.parseInt(biggerArr[i], 16);
+
+            int subtractValue = memory;
+            if (i < smallerAgg.length) {
+                subtractValue = Integer.parseInt(smallerAgg[i], 16) + memory;
+            }
+
+            if (subtrahend < subtractValue) {
+                subtrahend = subtrahend + 16;
+                memory = 1;
+            }
+
+            int tempSubtract = subtrahend - subtractValue;
+            biggerArr[i] = Integer.toHexString(tempSubtract);
+        }
+
+
+        LongLong tempResult = new LongLong(String.join("", biggerArr));
+
+        if (!compare) {
+            return tempResult.changeSign();
+        }
+        return tempResult;
+    }
+
+    private static boolean compare2Positive(LongLong a, LongLong b) {
+        LongLong x = a.copy();
+        LongLong y = b.copy();
+
+        x.trimLeftZero();
+        y.trimLeftZero();
+
+
+        if (x.getValue().length() == y.getValue().length()) {
+            for (int i = 0; i < x.getValue().length() - 1; i++) {
+                if (x.getValue().charAt(i) != y.getValue().charAt(i)) {
+                    return Integer.parseInt(x.getValue().substring(i, i + 1), 16) >=
+                            Integer.parseInt(y.getValue().substring(i, i + 1), 16);
+                }
+            }
+
+            return true;
+
+        }
+
+        return x.getValue().length() > y.getValue().length();
+    }
+
+
+    public LongLong trimLeftZero() {
+        if (this.value == null || this.value.isEmpty()) {
+            return this;
+        }
+        int start = 0;
+        for (int i = 0; i < this.value.length(); i++) {
+            if (this.value.charAt(i) != '0') {
+                break;
+            }
+            start++;
+        }
+
+        String temp = this.value.substring(start);
+        if (temp.isEmpty()) {
+            temp = "0";
+        }
+        this.value = temp;
+        return this;
+    }
+
+
+    public boolean isNegativeNumber() {
+        return !isEmpty() && this.value.startsWith("-");
+    }
+
+    public LongLong changeSign() {
+        if (isEmpty()) {
+            return this;
+        }
+        if (this.value.startsWith("-")) {
+            this.value = this.value.substring(1);
+            return this;
+        }
+
+        this.value = "-" + this.value;
+        return this;
+    }
+
+
+    public void aggregate(LongLong x, boolean insert) {
+        if (!ibfDbAgg) {
+            xor(x);
+            return;
+        }
+
+        if (insert) {
+            LongLong temp = sum(this, x);
+            this.value = temp.getValue();
+        } else {
+            LongLong temp = subtract(this, x);
+            this.value = temp.getValue();
+        }
     }
 
 
     @SneakyThrows
-    public void xor(LongLong x) {
+    private void xor(LongLong x) {
         if (x == null || x.isEmpty()) {
             return;
         }
