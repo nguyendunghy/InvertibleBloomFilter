@@ -3,136 +3,87 @@ package com.example.invertiblebloomfilter.ibf;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class LongLongTest {
 
-    @Test
-    void testLpad() {
-        LongLong x = new LongLong("123");
-        String result = x.lpadZero(x.getValue(), 10);
-        Assert.assertEquals(10, result.length());
-        Assert.assertEquals("0000000123", result);
-    }
 
     @Test
-    void testLpadShouldReturnTrue() {
-        LongLong x = new LongLong("123");
-        String result = x.lpadZero(x.getValue(), 3);
-        Assert.assertEquals(3, result.length());
-        Assert.assertEquals("123", result);
-    }
+    void testSubtract1() {
+        List<String> listA = Arrays.asList("", "A", "", "0", "B", "1234789", "adef", "23241", "-ffab", "-fa23", "-12", "0000000abc", "-000000000000000001abc");
+        List<String> listB = Arrays.asList("", "", "B", "A", "0", "adef", "1234789", "-abc", "abc1234", "-a12", "-abcdef1", "-0000cdf", "-00012aff");
 
-    @Test
-    void testLpadShouldReturnEquals() {
-        LongLong x = new LongLong("123");
-        String result = x.lpadZero(x.getValue(), 1);
-        Assert.assertEquals(3, result.length());
-        Assert.assertEquals("123", result);
-    }
+        for (int i = 0; i < listA.size(); i++) {
+            LongLong a = new LongLong(listA.get(i));
+            LongLong b = new LongLong(listB.get(i));
 
-    @Test
-    void testTrimLeftZero() {
-        LongLong x = new LongLong("000123");
-        x.trimLeftZero();
-        Assert.assertEquals(3, x.getValue().length());
-        Assert.assertEquals("123", x.getValue());
+            int aa = Integer.parseInt(a.getValue(), 16);
+            int bb = Integer.parseInt(b.getValue(), 16);
+            int cc = aa - bb;
+
+            LongLong c = LongLong.subtract(a, b);
+            Assert.assertEquals(toSignedHexString(cc).toUpperCase(), c.getValue());
+        }
 
     }
 
     @Test
-    void testTrimLeftZero2() {
-        LongLong x = new LongLong("000000000");
-        x.trimLeftZero();
-        Assert.assertEquals("0", x.getValue());
-    }
+    void testSubtract2() {
+        List<String> listA = Arrays.asList("-ffab");
+        List<String> listB = Arrays.asList("abc1234");
 
+        for (int i = 0; i < listA.size(); i++) {
+            LongLong a = new LongLong(listA.get(i));
+            LongLong b = new LongLong(listB.get(i));
 
-    @Test
-    void testTrimLeftZero3() {
-        LongLong x = new LongLong("");
-        x.trimLeftZero();
-        Assert.assertEquals("0", x.getValue());
-    }
+            int aa = Integer.parseInt(a.getValue(), 16);
+            int bb = Integer.parseInt(b.getValue(), 16);
+            int cc = aa - bb;
 
-    @Test
-    void testSubtract2Positive() {
-        LongLong a = new LongLong("12345");
-        LongLong b = new LongLong("11111");
+            LongLong c = LongLong.subtract(a, b);
+            Assert.assertEquals(toSignedHexString(cc).toUpperCase(), c.getValue());
+        }
 
-        LongLong c = LongLong.subtract2Positive(a, b);
-        Assert.assertEquals("1234", c.getValue());
     }
 
     @Test
-    void testSubtract2Positive1() {
-        LongLong a = new LongLong("11111");
-        LongLong b = new LongLong("12345");
+    void testSum() {
+        List<String> listA = Arrays.asList("", "A", "", "0", "B", "1234789", "adef", "23241", "-ffab", "-fa23", "-12", "0000000abc", "-000000000000000001abc");
+        List<String> listB = Arrays.asList("", "", "B", "A", "0", "adef", "1234789", "-abc", "abc1234", "-a12", "-abcdef1", "-0000cdf", "-00012aff");
 
-        int aa = Integer.parseInt(a.getValue(), 16);
-        int bb = Integer.parseInt(b.getValue(), 16);
+        for (int i = 0; i < listA.size(); i++) {
+            LongLong a = new LongLong(listA.get(i));
+            LongLong b = new LongLong(listB.get(i));
 
-        int cc = aa - bb;
+            int aa = Integer.parseInt(a.getValue(), 16);
+            int bb = Integer.parseInt(b.getValue(), 16);
+            int cc = aa + bb;
 
-        LongLong c = LongLong.subtract2Positive(a, b);
-        Assert.assertEquals(toSignedHexString(cc), c.getValue());
+            LongLong c = LongLong.sum(a, b);
+            Assert.assertEquals(toSignedHexString(cc).toUpperCase(), c.getValue());
+        }
+
     }
 
     @Test
-    void testSubtract2Positive2() {
-        LongLong a = new LongLong("abc");
-        LongLong b = new LongLong("def");
+    void testSum1() {
+        List<String> listA = Arrays.asList("23241");
+        List<String> listB = Arrays.asList("-abc");
 
-        int aa = Integer.parseInt(a.getValue(), 16);
-        int bb = Integer.parseInt(b.getValue(), 16);
+        for (int i = 0; i < listA.size(); i++) {
+            LongLong a = new LongLong(listA.get(i));
+            LongLong b = new LongLong(listB.get(i));
 
-        int cc = aa - bb;
+            int aa = Integer.parseInt(a.getValue(), 16);
+            int bb = Integer.parseInt(b.getValue(), 16);
+            int cc = aa + bb;
 
-        LongLong c = LongLong.subtract2Positive(a, b);
-        Assert.assertEquals(toSignedHexString(cc), c.getValue());
+            LongLong c = LongLong.sum(a, b);
+            Assert.assertEquals(toSignedHexString(cc).toUpperCase(), c.getValue());
+        }
+
     }
-
-
-    @Test
-    void testSubtract2Positive3() {
-        LongLong a = new LongLong("ab");
-        LongLong b = new LongLong("0");
-
-        int aa = Integer.parseInt(a.getValue(), 16);
-        int bb = Integer.parseInt(b.getValue(), 16);
-
-        int cc = aa - bb;
-
-        LongLong c = LongLong.subtract2Positive(a, b);
-        Assert.assertEquals(toSignedHexString(cc), c.getValue());
-    }
-    @Test
-    void testSubtract2Positive4() {
-        LongLong a = new LongLong("000");
-        LongLong b = new LongLong("ab");
-
-        int aa = Integer.parseInt(a.getValue(), 16);
-        int bb = Integer.parseInt(b.getValue(), 16);
-
-        int cc = aa - bb;
-
-        LongLong c = LongLong.subtract2Positive(a, b);
-        Assert.assertEquals(toSignedHexString(cc), c.getValue());
-    }
-
-
-    @Test
-    void testSubtract2Positive5() {
-        LongLong a = new LongLong("");
-        LongLong b = new LongLong("ab");
-
-        int aa = Integer.parseInt(a.getValue(), 16);
-        int bb = Integer.parseInt(b.getValue(), 16);
-
-        int cc = aa - bb;
-
-        LongLong c = LongLong.subtract2Positive(a, b);
-        Assert.assertEquals(toSignedHexString(cc), c.getValue());
-    }
-
 
     String toSignedHexString(int a) {
         if (a < 0) {

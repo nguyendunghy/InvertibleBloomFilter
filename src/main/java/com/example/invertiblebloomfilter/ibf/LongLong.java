@@ -61,9 +61,36 @@ public class LongLong {
             return x;
         }
 
-        if (x.isEmpty()) {
-            x.value = y.value;
+        if (x == null || x.isEmpty()) {
+            return y;
+        }
+
+        if(x.isNegativeNumber()){
+            if(y.isNegativeNumber()){
+                LongLong temp = sum2Positive(x.changeSign(),y.changeSign());
+                return temp.changeSign();
+            }else{
+                return subtract2Positive(y, x.changeSign());
+            }
+        }else{
+            if(y.isNegativeNumber()){
+                return subtract2Positive(x,y.changeSign());
+            }else{
+                return sum2Positive(x,y);
+            }
+        }
+    }
+
+    private static LongLong sum2Positive(LongLong a, LongLong b) {
+        LongLong x = a.copy();
+        LongLong y = b.copy();
+
+        if (y == null || y.isEmpty()) {
             return x;
+        }
+
+        if (x == null || x.isEmpty()) {
+            return y;
         }
 
         int maxLength = Integer.max(x.value.length(), y.value.length());
@@ -72,7 +99,7 @@ public class LongLong {
         String[] tempX = lpadZero(y.value, maxLength).split("");
 
         int memory = 0;
-        for (int i = 0; i < tempValue.length; i++) {
+        for (int i = tempValue.length - 1; i >= 0; i--) {
             int tempSum = Integer.parseInt(tempValue[i], 16) + Integer.parseInt(tempX[i], 16) + memory;
             memory = tempSum / 16;
             tempValue[i] = Integer.toHexString(tempSum % 16);
@@ -85,7 +112,7 @@ public class LongLong {
         return x;
     }
 
-    public static String lpadZero(String x, int targetLen) {
+    private static String lpadZero(String x, int targetLen) {
         if (x == null) {
             x = "";
         }
@@ -108,35 +135,27 @@ public class LongLong {
             return x;
         }
 
-        if (x.isEmpty()) {
-            x.value = y.changeSign().getValue();
-            return x;
+        if (x == null || x.isEmpty()) {
+            return y;
         }
 
         if (x.isNegativeNumber()) {
             if (y.isNegativeNumber()) {
-                LongLong temp = subtract2Positive(y.changeSign(), x.changeSign());
-                x.value = temp.getValue();
-                return x;
+                return subtract2Positive(y.changeSign(), x.changeSign());
             } else {
-                LongLong temp = sum(x.changeSign(), y);
-                x.value = temp.changeSign().getValue();
-                return x;
+                LongLong temp = sum2Positive(x.changeSign(), y);
+                return temp.changeSign();
             }
         } else {
             if (y.isNegativeNumber()) {
-                LongLong temp = sum(x, y.changeSign());
-                x.value = temp.getValue();
-                return x;
+                return sum2Positive(x, y.changeSign());
             } else {
-                LongLong temp = subtract2Positive(x, y);
-                x.value = temp.getValue();
-                return x;
+                return subtract2Positive(x, y);
             }
         }
     }
 
-    public static LongLong subtract2Positive(LongLong a, LongLong b) {
+    private static LongLong subtract2Positive(LongLong a, LongLong b) {
         LongLong x = a.copy();
         LongLong y = b.copy();
 
@@ -149,20 +168,22 @@ public class LongLong {
         smaller.trimLeftZero();
 
         String[] biggerArr = bigger.getValue().split("");
-        String[] smallerAgg = smaller.getValue().split("");
+        String[] smallerArr = smaller.getValue().split("");
 
         int memory = 0;
-        for (int i = 0; i < biggerArr.length; i++) {
+        for (int i = biggerArr.length - 1, j = smallerArr.length - 1; i >= 0; i--, j--) {
             int subtrahend = Integer.parseInt(biggerArr[i], 16);
 
             int subtractValue = memory;
-            if (i < smallerAgg.length) {
-                subtractValue = Integer.parseInt(smallerAgg[i], 16) + memory;
+            if (j >= 0) {
+                subtractValue = Integer.parseInt(smallerArr[j], 16) + memory;
             }
 
             if (subtrahend < subtractValue) {
                 subtrahend = subtrahend + 16;
                 memory = 1;
+            } else {
+                memory = 0;
             }
 
             int tempSubtract = subtrahend - subtractValue;
@@ -170,7 +191,7 @@ public class LongLong {
         }
 
 
-        LongLong tempResult = new LongLong(String.join("", biggerArr));
+        LongLong tempResult = new LongLong(String.join("", biggerArr).toUpperCase());
 
         if (!compare) {
             return tempResult.changeSign();
@@ -202,7 +223,7 @@ public class LongLong {
     }
 
 
-    public LongLong trimLeftZero() {
+    private LongLong trimLeftZero() {
         if (this.value == null || this.value.isEmpty()) {
             return this;
         }
@@ -223,11 +244,11 @@ public class LongLong {
     }
 
 
-    public boolean isNegativeNumber() {
+    private boolean isNegativeNumber() {
         return !isEmpty() && this.value.startsWith("-");
     }
 
-    public LongLong changeSign() {
+    private LongLong changeSign() {
         if (isEmpty()) {
             return this;
         }
