@@ -12,7 +12,10 @@ import lombok.*;
 public class LongLong {
     private String value;
 
+    @JsonIgnore
     private boolean ibfDbAgg = true;
+    @JsonIgnore
+    private static int radix = 10;
 
     public LongLong(String value) {
         if (value == null || value.isEmpty()) {
@@ -47,6 +50,36 @@ public class LongLong {
             return 0;
         }
         return (long) value.hashCode();
+    }
+
+    public long mod(long divisor){
+        if(isEmpty()){
+            return 0;
+        }
+        String value = this.value;
+        int signed = 1;
+        if(isNegativeNumber()){
+            value = this.changeSign().getValue();
+            signed = -1;
+        }
+
+        long temp = 0;
+        for(int i=0, j=1; i< value.length() && j<= value.length(); ){
+            temp = Long.parseLong(temp + value.substring(i,j),radix);
+            if(temp < divisor){
+                j++;
+                if(j > value.length()){
+                    return temp * signed;
+                }
+                temp = 0;
+            }else{
+                temp = temp % divisor;
+                i = j;
+                j= i+1;
+            }
+        }
+
+        return temp * signed;
     }
 
     public LongLong copy() {
@@ -100,14 +133,14 @@ public class LongLong {
 
         int memory = 0;
         for (int i = tempValue.length - 1; i >= 0; i--) {
-            int tempSum = Integer.parseInt(tempValue[i], 16) + Integer.parseInt(tempX[i], 16) + memory;
-            memory = tempSum / 16;
-            tempValue[i] = Integer.toHexString(tempSum % 16);
+            int tempSum = Integer.parseInt(tempValue[i], radix) + Integer.parseInt(tempX[i], radix) + memory;
+            memory = tempSum / radix;
+            tempValue[i] = Integer.toHexString(tempSum % radix);
         }
 
         x.value = String.join("", tempValue).toUpperCase();
         if (memory != 0) {
-            x.value = Integer.toHexString(memory % 16).toUpperCase() + x.value;
+            x.value = Integer.toHexString(memory % radix).toUpperCase() + x.value;
         }
         return x;
     }
@@ -172,15 +205,15 @@ public class LongLong {
 
         int memory = 0;
         for (int i = biggerArr.length - 1, j = smallerArr.length - 1; i >= 0; i--, j--) {
-            int subtrahend = Integer.parseInt(biggerArr[i], 16);
+            int subtrahend = Integer.parseInt(biggerArr[i], radix);
 
             int subtractValue = memory;
             if (j >= 0) {
-                subtractValue = Integer.parseInt(smallerArr[j], 16) + memory;
+                subtractValue = Integer.parseInt(smallerArr[j], radix) + memory;
             }
 
             if (subtrahend < subtractValue) {
-                subtrahend = subtrahend + 16;
+                subtrahend = subtrahend + radix;
                 memory = 1;
             } else {
                 memory = 0;
@@ -210,8 +243,8 @@ public class LongLong {
         if (x.getValue().length() == y.getValue().length()) {
             for (int i = 0; i < x.getValue().length() - 1; i++) {
                 if (x.getValue().charAt(i) != y.getValue().charAt(i)) {
-                    return Integer.parseInt(x.getValue().substring(i, i + 1), 16) >=
-                            Integer.parseInt(y.getValue().substring(i, i + 1), 16);
+                    return Integer.parseInt(x.getValue().substring(i, i + 1), radix) >=
+                            Integer.parseInt(y.getValue().substring(i, i + 1), radix);
                 }
             }
 
@@ -296,7 +329,7 @@ public class LongLong {
         String[] tempValue = this.value.split("");
         String[] tempX = x.getValue().split("");
         for (int i = 0; i < tempValue.length; i++) {
-            int tempXor = Integer.parseInt(tempValue[i], 16) ^ Integer.parseInt(tempX[i], 16);
+            int tempXor = Integer.parseInt(tempValue[i], radix) ^ Integer.parseInt(tempX[i], radix);
             tempValue[i] = Integer.toHexString(tempXor);
         }
 

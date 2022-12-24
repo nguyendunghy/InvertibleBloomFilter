@@ -1,6 +1,7 @@
 package com.example.invertiblebloomfilter.velocity;
 
 import com.example.invertiblebloomfilter.ibf.*;
+import com.example.invertiblebloomfilter.utils.PropertyUtils;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -25,7 +26,7 @@ public class VelocityUtils {
         hashMap.put("useXOR", false);
         hashMap.put("useLegacyRowHash", true);
         hashMap.put("fastIbfQuery", false);
-        hashMap.put("oracleVersion", 12);
+        hashMap.put("oracleVersion", Integer.parseInt(PropertyUtils.get("oracle.version")));
         hashMap.put("output", "#" + outputFunc + "()");
 
         return VelocityUtils.generate(templateFilename, hashMap);

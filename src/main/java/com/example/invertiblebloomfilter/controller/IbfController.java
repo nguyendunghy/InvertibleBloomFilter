@@ -93,7 +93,7 @@ public class IbfController {
 
 
     private InvertibleBloomFilter createInvertibleBloomFilter(){
-        InvertibleBloomFilter newIBF = new InvertibleBloomFilter(4, 20);
+        InvertibleBloomFilter newIBF = new InvertibleBloomFilter(4, 100);
         return newIBF;
     }
 

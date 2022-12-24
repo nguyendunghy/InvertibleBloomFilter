@@ -113,10 +113,9 @@ public class InvertibleBloomFilter {
         int cellIndex = row.getCellIndex();
         LongLong rowHashNumber = row.getRowHash();
         long count = row.getCount();
-        long[] hashNumbers = new long[]{};
 
-        Cell cell = new Cell(hashNumbers, rowHashNumber, count);
-        this.cells[cellIndex] = cell;
+        this.cells[cellIndex].setCount(count);
+        this.cells[cellIndex].setRowHashSum(rowHashNumber);
     }
 
     /**
@@ -157,13 +156,18 @@ public class InvertibleBloomFilter {
         while (true) {
             if (pureList.isEmpty()) {
                 for (int i = 0; i < cells.length; i++) {
-                    if (isPureCell(i)) pureList.add(i);
-
+                    if (isPureCell(i)) {
+                        pureList.add(i);
+                    }
                     // set zero cells to null to allow GC to reclaim memory if needed
                     Cell cell = getCell(i);
-                    if (cell != null && cell.isZero()) cells[i] = null;
+                    if (cell != null && cell.isZero()) {
+                        cells[i] = null;
+                    }
                 }
-                if (pureList.isEmpty()) break;
+                if (pureList.isEmpty()) {
+                    break;
+                }
             }
 
             int index = pureList.pop();
@@ -217,13 +221,19 @@ public class InvertibleBloomFilter {
      * when the cell has a count of 1 or -1, indicate that it *may* represent a single element
      */
     protected boolean isPureCell(int cellIndex) {
-        if (getCell(cellIndex) == null) return false;
-        if (!getCell(cellIndex).isSingular()) return false;
+        if (getCell(cellIndex) == null) {
+            return false;
+        }
+        if (!getCell(cellIndex).isSingular()) {
+            return false;
+        }
 
         int[] hashIndices = distinctHashIndices(getCell(cellIndex).rowHashSum());
 
         for (int i = 0; i < K_INDEPENDENT_HASH_FUNCTIONS; i++) {
-            if (hashIndices[i] == cellIndex) return true;
+            if (hashIndices[i] == cellIndex) {
+                return true;
+            }
         }
 
         return false;

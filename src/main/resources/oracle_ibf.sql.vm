@@ -190,14 +190,14 @@ SELECT #columns() FROM $table
 
 #macro(aggregate $column)
     #if ($useXOR)
-        FT_BITXOR("$column") AS "#concatString($column,'_number')"
+        FT_BITXOR("$column") AS #concatString($column,'_number')
     #else
-        SUM("$column") AS "#concatString($column,'_number')"
+        SUM("$column") AS #concatString($column,'_number')
     #end
 #end
 
 #macro(concatString $a $b)
-    $a$b
+    "$a$b"
 #end
 
 #macro(queryWithoutCartesianJoin)

@@ -85,6 +85,35 @@ public class LongLongTest {
 
     }
 
+    @Test
+    void testMod() {
+        List<String> listA = Arrays.asList("100", "100","12003420","2314598323","47","000000000","1", "-47","1000");
+        List<Long> listDivisors = Arrays.asList(2L, 12L,123L,47L,1000L, 121L,12342L,1000L,-43L);
+
+
+        for (int i = 0; i < listA.size(); i++) {
+            LongLong a = new LongLong(listA.get(i));
+            long mod = a.mod(listDivisors.get(i));
+            Assert.assertEquals(Long.parseLong(listA.get(i)) % listDivisors.get(i), mod);
+        }
+
+    }
+
+    @Test
+    void testMod1() {
+        List<String> listA = Arrays.asList( "-47");
+        List<Long> listDivisors = Arrays.asList( 1000L);
+        System.out.println(-1001 %1000);
+
+
+        for (int i = 0; i < listA.size(); i++) {
+            LongLong a = new LongLong(listA.get(i));
+            long mod = a.mod(listDivisors.get(i));
+            Assert.assertEquals(Long.parseLong(listA.get(i)) % listDivisors.get(i), mod);
+        }
+
+    }
+
     String toSignedHexString(int a) {
         if (a < 0) {
             return "-" + Integer.toHexString(-a);
