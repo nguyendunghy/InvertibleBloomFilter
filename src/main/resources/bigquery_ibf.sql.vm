@@ -1,0 +1,66 @@
+## For full documentation, see "IBF Encode Algorithm" in https://docs.google.com/document/d/1pIV_NPFTDxHnKyiwgICpB7td53GChz9lFV1t2eOERtI/edit
+
+##
+## Output Macros
+##
+#macro(invertibleBloomFilter)
+    CREATE OR REPLACE TEMP TABLE $tempTableName
+AS
+    SELECT DISTINCT
+        #rowHashStatement
+        #foreach ($column in $columns), $column.name #end
+    FROM $tableName;
+
+
+    SELECT _ibf_cell_index,
+        BIT_XOR(_ibf_column0),
+        BIT_XOR(_ibf_column1),
+        BIT_XOR(_ibf_column2),
+        BIT_XOR(_ibf_column3),
+        BIT_XOR(_ibf_row_hash),
+        ## count
+        COUNT(_ibf_row_hash)
+    FROM (
+        SELECT
+        ## ABS to ensure _ibf_cell_index is a positive value for the IBF
+        CASE
+        ## rowHash is 128 bits (32 hex chars) but the biggest data types in BigQuery only support 64 bits (INT64 / NUMERIC).
+        ## This uses FARM_FINGERPRINT as a means to convert to NUMERIC rather than the first or last 64 bits
+        WHEN _ibf_hash_index = 0 THEN ABS(MOD(_ibf_row_hash, $primeDivisors[0])) ## + $partitionOffsets[0] => always 0
+        WHEN _ibf_hash_index = 1 THEN ABS(MOD(_ibf_row_hash, $primeDivisors[1])) + $partitionOffsets[1]
+        WHEN _ibf_hash_index = 2 THEN ABS(MOD(_ibf_row_hash, $primeDivisors[2])) + $partitionOffsets[2]
+        END as _ibf_cell_index,
+        ## keySums built only on $virtual_key_column column
+        CAST(CONCAT("0x", SUBSTR(TO_HEX($virtual_key_column), 1, 8)) AS BIGINT) AS _ibf_column0,
+        CAST(CONCAT("0x", SUBSTR(TO_HEX($virtual_key_column), 9, 8)) AS BIGINT) AS _ibf_column1,
+        CAST(CONCAT("0x", SUBSTR(TO_HEX($virtual_key_column), 17, 8)) AS BIGINT) AS _ibf_column2,
+        CAST(CONCAT("0x", SUBSTR(TO_HEX($virtual_key_column), 25, 8)) AS BIGINT) AS _ibf_column3,
+        ## hashSum calculate on a hash of the $virtual_key_column, will be used in purity check of the IBF#decode() algorithm
+        _ibf_row_hash
+        FROM
+        (SELECT
+        #rowHash() AS _ibf_row_hash, $virtual_key_column
+        #foreach ($column in $columns), $column.name #end
+        FROM $tempTableName)
+        CROSS JOIN UNNEST ([0, 1, 2]) AS _ibf_hash_index
+        ) GROUP BY _ibf_cell_index;
+
+#end
+
+#macro(rowHashStatement)
+    #set($colNum = 0)
+    MD5
+    #foreach($column in $columns)
+        #if($colNum > 0),"|",#end
+        #if($column.sourceType == "STRING")
+          COALESCE($column.name, "")
+        #else
+          COALESCE(CAST($column.name AS STRING), "")
+        #end
+        #set($colNum = $colNum + 1)
+    #end
+    $virtual_key_column
+#end
+
+#macro(rowHash)
+FARM_FINGERPRINT($virtual_key_column)#end
