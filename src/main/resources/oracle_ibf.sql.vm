@@ -7,6 +7,8 @@
  $primeDivisors: long[3] Provided by ibfDbUtils
  $partitionOffsets: long[3] - Provided by ibfDbUtils
  $dateNumberFormat: formatter to read date as a number
+ $rowHashPortionNumber: number of row hash portion to be divided
+ $portionLength: length of a portion
  *#
 #evaluate($output)
 
@@ -20,10 +22,9 @@
 
 #macro(retrieveData)
     SELECT *
-    FROM (
-         SELECT #columnsWithoutHash()
-         FROM $table
-        )
+    FROM (SELECT #columnsWithoutHash()
+          FROM $table
+         )
     WHERE "_ibf_row_hash" = ?
 #end
 
@@ -46,7 +47,21 @@
 #end
 
 #macro(invertibleBloomFilterWithConnectorAggregation)
-SELECT #columns() FROM $table
+SELECT
+    #set($endIndex = $rowHashPortionNumber - 1)
+    #foreach($i in [0..$endIndex])
+        TO_NUMBER(SUBSTR("_ibf_row_hash", 1 + $portionLength * $i, $portionLength),
+                  'XXXXXXXX')                                          AS "_ibf_row_hash_number$i",
+    #end
+        TO_NUMBER("_ibf_row_hash", 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX') AS "_ibf_row_hash_number",
+    #set($endIndex = $tableColumns.size() - 1)
+    #foreach($i in [0..$endIndex])
+        #if($i > 0),#end
+        "_ibf_column$i"
+    #end
+FROM(SELECT #columns()
+     FROM $table
+)
 #end
 
 ######
@@ -60,7 +75,8 @@ SELECT #columns() FROM $table
         #define($stringifiedColumn)
             #stringifyNullable($column)
         #end
-        #if($i > 0),#end #md5_60bits($stringifiedColumn) AS "_ibf_column$i"
+        #if($i > 0),#end #md5_128bits($stringifiedColumn)
+        AS "_ibf_column$i"
     #end
 #end
 
@@ -128,7 +144,7 @@ SELECT #columns() FROM $table
             #stringifyNullable($column)
         #end
     #end
-    #md5_60bits($rowRepresentation)
+    #md5_128bits($rowRepresentation)
 #end
 
 #macro(defaultRowHash)
@@ -176,6 +192,30 @@ SELECT #columns() FROM $table
         TO_NUMBER(SUBSTR(DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner)), 1, 15), 'XXXXXXXXXXXXXXX')
     #else
         TO_NUMBER(SUBSTR(#md5($inner), 1, 15), 'XXXXXXXXXXXXXXX')
+    #end
+#end
+
+#macro(md5_128bits $inner)
+    #if($useConnectorAggregation)
+        #if($oracleVersion < 12)
+            DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner))
+        #else
+            #md5($inner)
+        #end
+    #else
+        #if($oracleVersion < 12)
+            TO_NUMBER(DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner)),'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+        #else
+            TO_NUMBER(#md5($inner),'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+        #end
+    #end
+#end
+
+#macro(to_number_md5_128bits $inner)
+    #if($oracleVersion < 12)
+        TO_NUMBER(DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner)),'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+    #else
+        TO_NUMBER(#md5($inner),'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
     #end
 #end
 
