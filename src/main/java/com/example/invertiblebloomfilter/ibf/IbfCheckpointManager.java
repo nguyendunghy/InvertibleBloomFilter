@@ -1,6 +1,7 @@
 package com.example.invertiblebloomfilter.ibf;
 
 
+import com.example.invertiblebloomfilter.utils.Constant;
 import com.google.common.annotations.VisibleForTesting;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -17,7 +18,7 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
 
     private static final IbfRetrier RETRIER = new IbfRetrier(Arrays.asList(IOException.class));
     private static final int MAX_RETRIES = 4;
-    private static final int DEFAULT_SMALL_CELL_COUNT = 5_00; // results in a ~8MB ResizableIBF
+    public static final int DEFAULT_SMALL_CELL_COUNT = 5_00; // results in a ~8MB ResizableIBF
     @VisibleForTesting
     static final int MINIMUM_SMALL_CELL_COUNT = 3_20;
 
@@ -195,7 +196,7 @@ public class IbfCheckpointManager<Adapter extends IbfTableEncoder> {
         if (!diffManager.hasResult()) {
             throw new IllegalStateException("diff() must be called before update()");
         }
-        if (!diffManager.compareSucceeded()) {
+        if (!diffManager.compareSucceeded() && !Constant.IBF_DB_AGG) {
             throw new IllegalStateException("cannot update unless diff returned a successful result");
         }
 

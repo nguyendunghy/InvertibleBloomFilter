@@ -2,7 +2,9 @@ package com.example.invertiblebloomfilter.ibf;
 
 import com.example.invertiblebloomfilter.entity.DataTable;
 import com.example.invertiblebloomfilter.repo.impl.IbfDataRepoImpl;
+import com.example.invertiblebloomfilter.utils.Constant;
 import com.example.invertiblebloomfilter.utils.JdbcTemplateUtils;
+import com.example.invertiblebloomfilter.utils.PropertyUtils;
 import com.google.common.collect.ImmutableMap;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.codec.DecoderException;
@@ -38,6 +40,7 @@ public class IbfDbUtils {
     private IbfDbUtils() {
         throw new IllegalStateException("Utility class");
     }
+
 
     public static void loadInvertibleBloomFilterFromResultSet(InvertibleBloomFilter ibf, ResultSet rs)
             throws SQLException {
@@ -251,7 +254,11 @@ public class IbfDbUtils {
         log.info("retrieveRecord ROW_HASH " + rowHash);
         JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(buildDataSource(), new JdbcProperties());
         IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
-        return ibfDataRepo.retrieveAllData(rowHash, retrieveQuery);
+        if (Constant.IBF_DB_AGG) {
+            return ibfDataRepo.retrieveDbAggAllData(rowHash, retrieveQuery);
+        } else {
+            return ibfDataRepo.retrieveAllData(rowHash, retrieveQuery);
+        }
 
     }
 
@@ -259,11 +266,12 @@ public class IbfDbUtils {
         log.info("retrieveHistoryRecord ROW_HASH " + rowHash);
         JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(buildDataSource(), new JdbcProperties());
         IbfDataRepoImpl ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
-        return ibfDataRepo.retrieveAllHistoryData(rowHash, retrieveHistoryQuery);
-
+        if (Constant.IBF_DB_AGG) {
+            return ibfDataRepo.retrieveDbAggAllHistoryData(rowHash, retrieveHistoryQuery);
+        } else {
+            return ibfDataRepo.retrieveAllHistoryData(rowHash, retrieveHistoryQuery);
+        }
     }
-
-
 
 
 }

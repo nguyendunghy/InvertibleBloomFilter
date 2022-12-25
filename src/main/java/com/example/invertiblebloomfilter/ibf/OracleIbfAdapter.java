@@ -2,7 +2,9 @@ package com.example.invertiblebloomfilter.ibf;
 
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
 import com.example.invertiblebloomfilter.repo.impl.IbfDataRepoImpl;
+import com.example.invertiblebloomfilter.utils.Constant;
 import com.example.invertiblebloomfilter.utils.JdbcTemplateUtils;
+import com.example.invertiblebloomfilter.utils.PropertyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.JdbcProperties;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,7 +20,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-/** This class is responsible for running the IBF SQL Query and retrieving the results. */
+/**
+ * This class is responsible for running the IBF SQL Query and retrieving the results.
+ */
 public class OracleIbfAdapter implements IbfTableEncoderWithCompoundPK {
     private static final ExampleLogger LOG = ExampleLogger.getMainLogger();
 
@@ -154,7 +158,7 @@ public class OracleIbfAdapter implements IbfTableEncoderWithCompoundPK {
         return getIbfFromDb(ibf, ibfQueryBuilder.setCellCount(cellCount).setFixedSize(true).buildQuery());
     }
 
-    private <T extends InvertibleBloomFilter>T getIbfFromDb(T ibf, String query)  {
+    private <T extends InvertibleBloomFilter> T getIbfFromDb(T ibf, String query) {
         try {
             //retrier.run(() -> executeIbfQueryAndLoad(ibf, query));
         } catch (Exception ex) {
@@ -167,10 +171,13 @@ public class OracleIbfAdapter implements IbfTableEncoderWithCompoundPK {
 
     private ResizableInvertibleBloomFilter getIbfFromDb(ResizableInvertibleBloomFilter ibf, String query) throws SQLException {
         try {
-            JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(dataSource,new JdbcProperties());
-             IbfDataRepo ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
-            ibfDataRepo.streamIbfData(ibf, query);
-
+            JdbcTemplate jdbcTemplate = JdbcTemplateUtils.buildJdbcTemplate(dataSource, new JdbcProperties());
+            IbfDataRepo ibfDataRepo = new IbfDataRepoImpl(jdbcTemplate);
+            if (Constant.IBF_DB_AGG) {
+                ibfDataRepo.streamDbAggIbfData(ibf, query);
+            } else {
+                ibfDataRepo.streamIbfData(ibf, query);
+            }
             //retrier.run(() -> executeIbfQueryAndLoad(ibf, query));
         } catch (Exception ex) {
             //LOG.warning("Failed to create ibf filter for table " + tableRef().toString(), ex);
@@ -179,7 +186,6 @@ public class OracleIbfAdapter implements IbfTableEncoderWithCompoundPK {
 
         return ibf;
     }
-
 
 
     protected void executeIbfQueryAndLoad(InvertibleBloomFilter ibf, String query) throws SQLException {

@@ -1,5 +1,8 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.example.invertiblebloomfilter.utils.Constant;
+import com.example.invertiblebloomfilter.utils.PropertyUtils;
+
 import java.util.Arrays;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -40,10 +43,18 @@ public class OneHashingBloomFilterUtils {
     public static Function<LongLong, long[]> indexHashes(long[] divisors) {
         long[] offsets = partitionOffsets(divisors);
 
-        return rowHashSum ->
-                IntStream.range(0, divisors.length)
-                        .mapToLong(i -> Math.abs(rowHashSum.mod(divisors[i]) + offsets[i]))
-                        .toArray();
+       if(Constant.IBF_DB_AGG){
+           return rowHashSum ->
+                   IntStream.range(0, divisors.length)
+                           .mapToLong(i -> Math.abs(rowHashSum.mod(divisors[i]) + offsets[i]))
+                           .toArray();
+       }else{
+           return rowHashSum ->
+                   IntStream.range(0, divisors.length)
+                           .mapToLong(i -> Math.abs(rowHashSum.longValue() % divisors[i] + offsets[i]))
+                           .toArray();
+       }
+
     }
 
     public static long[] resizingDivisors(int k, int smallCellCount, int[] resizingFactors) {

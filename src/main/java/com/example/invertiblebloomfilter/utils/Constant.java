@@ -4,6 +4,8 @@ import java.util.HashMap;
 
 public class Constant {
 
+    public static final boolean IBF_DB_AGG = new Boolean(PropertyUtils.get("ibf.db.aggregator"));
+
     public static final long INTERNAL_ERROR = 404L;
     public static Long SAVE_USER_REQUEST_NULL = 1000L;
     public static final Long SAVE_USER_REQUEST_NAME_NULL = 1001L;

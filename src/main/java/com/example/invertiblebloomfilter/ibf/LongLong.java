@@ -1,10 +1,11 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.example.invertiblebloomfilter.utils.Constant;
+import com.example.invertiblebloomfilter.utils.PropertyUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
 @Builder
@@ -13,9 +14,7 @@ public class LongLong {
     private String value;
 
     @JsonIgnore
-    private boolean ibfDbAgg = true;
-    @JsonIgnore
-    private static int radix = 10;
+    private static int radix = Constant.IBF_DB_AGG ? 10 : 16;
 
     public LongLong(String value) {
         if (value == null || value.isEmpty()) {
@@ -25,9 +24,6 @@ public class LongLong {
         this.trimLeftZero();
     }
 
-    public boolean isIbfDbAgg() {
-        return ibfDbAgg;
-    }
 
     @JsonIgnore
     public boolean isEmpty() {
@@ -52,30 +48,30 @@ public class LongLong {
         return (long) value.hashCode();
     }
 
-    public long mod(long divisor){
-        if(isEmpty()){
+    public long mod(long divisor) {
+        if (isEmpty()) {
             return 0;
         }
         String value = this.value;
         int signed = 1;
-        if(isNegativeNumber()){
+        if (isNegativeNumber()) {
             value = this.changeSign().getValue();
             signed = -1;
         }
 
         long temp = 0;
-        for(int i=0, j=1; i< value.length() && j<= value.length(); ){
-            temp = Long.parseLong(temp + value.substring(i,j),radix);
-            if(temp < divisor){
+        for (int i = 0, j = 1; i < value.length() && j <= value.length(); ) {
+            temp = Long.parseLong(temp + value.substring(i, j), radix);
+            if (temp < divisor) {
                 j++;
-                if(j > value.length()){
+                if (j > value.length()) {
                     return temp * signed;
                 }
                 temp = 0;
-            }else{
+            } else {
                 temp = temp % divisor;
                 i = j;
-                j= i+1;
+                j = i + 1;
             }
         }
 
@@ -98,18 +94,18 @@ public class LongLong {
             return y;
         }
 
-        if(x.isNegativeNumber()){
-            if(y.isNegativeNumber()){
-                LongLong temp = sum2Positive(x.changeSign(),y.changeSign());
+        if (x.isNegativeNumber()) {
+            if (y.isNegativeNumber()) {
+                LongLong temp = sum2Positive(x.changeSign(), y.changeSign());
                 return temp.changeSign();
-            }else{
+            } else {
                 return subtract2Positive(y, x.changeSign());
             }
-        }else{
-            if(y.isNegativeNumber()){
-                return subtract2Positive(x,y.changeSign());
-            }else{
-                return sum2Positive(x,y);
+        } else {
+            if (y.isNegativeNumber()) {
+                return subtract2Positive(x, y.changeSign());
+            } else {
+                return sum2Positive(x, y);
             }
         }
     }
@@ -296,7 +292,7 @@ public class LongLong {
 
 
     public void aggregate(LongLong x, boolean insert) {
-        if (!ibfDbAgg) {
+        if (!Constant.IBF_DB_AGG) {
             xor(x);
             return;
         }

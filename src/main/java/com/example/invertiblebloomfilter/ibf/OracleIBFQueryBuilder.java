@@ -1,5 +1,7 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.example.invertiblebloomfilter.utils.Constant;
+import com.example.invertiblebloomfilter.utils.PropertyUtils;
 import com.example.invertiblebloomfilter.velocity.VelocityUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -17,6 +19,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static com.example.invertiblebloomfilter.ibf.IbfCheckpointManager.DEFAULT_SMALL_CELL_COUNT;
+import static com.example.invertiblebloomfilter.ibf.InvertibleBloomFilter.K_INDEPENDENT_HASH_FUNCTIONS;
+import static com.example.invertiblebloomfilter.ibf.ResizableInvertibleBloomFilter.Sizes.SMALL;
 
 public class OracleIBFQueryBuilder {
     private static final String TEMPLATE_FILENAME = "/integrations/oracle/resources/oracle_ibf.sql.vm";
@@ -56,6 +62,7 @@ public class OracleIBFQueryBuilder {
     private List<Integer> keyLengths;
     private int sumKeyLengths;
     private OracleColumnInfo[] arrayOfPrimaryKeys;
+
 
     public OracleIBFQueryBuilder() {
     }
@@ -159,18 +166,33 @@ public class OracleIBFQueryBuilder {
 //                Objects.requireNonNull(ibfSizes, "Call setIbfSizes(...) first"),
 //                templateParameters);
 
+        if(Constant.IBF_DB_AGG){
+            TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
+            OracleColumnInfo[] columns = this.arrayOfPrimaryKeys;
+            long[] divisors =  OneHashingBloomFilterUtils.resizingDivisors(
+                    K_INDEPENDENT_HASH_FUNCTIONS, DEFAULT_SMALL_CELL_COUNT, SMALL.resizingFactors);
+            return VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef, columns,
+                    divisors, "invertibleBloomFilter");
 
-        String ibfQuery = VelocityUtils.generateIBFQuery(
+        }
+
+       return VelocityUtils.generateIBFQuery(
                 "invertible_bloom_filter.vm",
                 ibfTableInfo.getTableRef().name,
                 this.arrayOfPrimaryKeys,
                 "hashTableData"
         );
 
-        return ibfQuery;
     }
 
     public String retrieveAllDataQuery() {
+        if(Constant.IBF_DB_AGG){
+            TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
+            OracleColumnInfo[] columns = this.arrayOfPrimaryKeys;
+            return VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef,
+                    columns, new long[]{}, "retrieveData");
+        }
+
         String retrieveDataQuery = VelocityUtils.generateIBFQuery(
                 "retrieve_data_template.vm",
                 ibfTableInfo.getTableRef().name,
@@ -181,6 +203,14 @@ public class OracleIBFQueryBuilder {
     }
 
     public String retrieveAllHistoryDataQuery() {
+        if(Constant.IBF_DB_AGG){
+            TableRef tableRef = new TableRef("JOHN", "IBF_DATA_HISTORY");
+            OracleColumnInfo[] columns = this.arrayOfPrimaryKeys;
+            return VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef,
+                    columns, new long[]{}, "retrieveData");
+        }
+
+
         String retrieveDataQuery = VelocityUtils.generateIBFQuery(
                 "retrieve_data_template.vm",
                 "IBF_DATA_HISTORY",

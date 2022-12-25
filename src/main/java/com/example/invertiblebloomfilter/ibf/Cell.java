@@ -1,5 +1,7 @@
 package com.example.invertiblebloomfilter.ibf;
 
+import com.example.invertiblebloomfilter.utils.Constant;
+import com.example.invertiblebloomfilter.utils.PropertyUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.netty.buffer.ByteBuf;
 
@@ -12,7 +14,7 @@ public class Cell {
     private long[] keySums;
     private long count;
 
-    private boolean ibfDbAgg = true;
+
 
     /**
      * Construct a new cell from the provided values and hash function. The checkSumHash
@@ -123,17 +125,13 @@ public class Cell {
 
 
     private long aggregate(long x, long y, boolean insert) {
-        if (ibfDbAgg) {
+        if (Constant.IBF_DB_AGG) {
             return insert ? x + y : x - y;
         }
 
         return x ^ y;
     }
 
-
-    public void setIbfDbAgg(boolean ibfDbAgg) {
-        this.ibfDbAgg = ibfDbAgg;
-    }
 
     public long[] keySums() {
         return keySums;
@@ -147,6 +145,7 @@ public class Cell {
         this.rowHashSum = rowHashSum;
     }
 
+//    @JsonIgnore
     public long[] getKeySums() {
         return keySums;
     }
