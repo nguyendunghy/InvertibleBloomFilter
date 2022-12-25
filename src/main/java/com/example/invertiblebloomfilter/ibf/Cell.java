@@ -10,10 +10,9 @@ import java.util.Arrays;
 
 public class Cell {
 
-    private LongLong rowHashSum;
+    private long rowHashSum;
     private long[] keySums;
     private long count;
-
 
 
     /**
@@ -24,7 +23,7 @@ public class Cell {
      * @param count      the number of elements that have been inserted into this cell; count can be negative when the cell
      *                   contains deleted elements
      */
-    public Cell(long[] keySums, LongLong rowHashSum, long count) {
+    public Cell(long[] keySums, long rowHashSum, long count) {
         this.rowHashSum = rowHashSum;
         this.keySums = keySums;
         this.count = count;
@@ -40,7 +39,7 @@ public class Cell {
      * @param rowHashSum
      * @param count
      */
-    public void load(long[] keySums, LongLong rowHashSum, long count) {
+    public void load(long[] keySums, long rowHashSum, long count) {
         this.rowHashSum = rowHashSum;
         this.keySums = keySums;
         this.count = count;
@@ -57,7 +56,7 @@ public class Cell {
                 return false;
             }
         }
-        return count == 0 && rowHashSum.isEmpty();
+        return count == 0 && rowHashSum == 0;
     }
 
     /**
@@ -74,11 +73,11 @@ public class Cell {
      * @param keySums    long[] representing the element; must have the same array length as the elementSum
      * @param rowHashSum accumulates the sum of the hash of a row inserted into this cell
      */
-    public void insert(long[] keySums, LongLong rowHashSum) {
+    public void insert(long[] keySums, long rowHashSum) {
         for (int i = 0; i < keySums.length; i++) {
             this.keySums[i] = aggregate(this.keySums[i], keySums[i], true);
         }
-        this.rowHashSum.aggregate(rowHashSum, true);
+        this.rowHashSum = aggregate(this.rowHashSum, rowHashSum, true);
         count++;
     }
 
@@ -87,11 +86,11 @@ public class Cell {
      *
      * @param keySums long[] representing the element; must have the same array length as the elementSum
      */
-    public void remove(long[] keySums, LongLong rowHashSum) {
+    public void remove(long[] keySums, long rowHashSum) {
         for (int i = 0; i < keySums.length; i++) {
             this.keySums[i] = aggregate(this.keySums[i], keySums[i], false);
         }
-        this.rowHashSum.aggregate(rowHashSum, false);
+        this.rowHashSum = aggregate(this.rowHashSum, rowHashSum, false);
         count--;
     }
 
@@ -105,7 +104,7 @@ public class Cell {
         for (int i = 0; i < other.keySums.length; i++) {
             this.keySums[i] = aggregate(this.keySums[i], other.keySums[i], true);
         }
-        this.rowHashSum.aggregate(other.rowHashSum, true);
+        this.rowHashSum = aggregate(this.rowHashSum, other.rowHashSum, true);
         count += other.count;
     }
 
@@ -119,7 +118,7 @@ public class Cell {
         for (int i = 0; i < other.keySums.length; i++) {
             this.keySums[i] = aggregate(this.keySums[i], other.keySums[i], false);
         }
-        this.rowHashSum.aggregate(other.rowHashSum, false);
+        this.rowHashSum = aggregate(this.rowHashSum, other.rowHashSum, false);
         this.count -= other.count;
     }
 
@@ -137,15 +136,15 @@ public class Cell {
         return keySums;
     }
 
-    public LongLong getRowHashSum() {
+    public long getRowHashSum() {
         return rowHashSum;
     }
 
-    public void setRowHashSum(LongLong rowHashSum) {
+    public void setRowHashSum(long rowHashSum) {
         this.rowHashSum = rowHashSum;
     }
 
-//    @JsonIgnore
+    //    @JsonIgnore
     public long[] getKeySums() {
         return keySums;
     }
@@ -162,12 +161,12 @@ public class Cell {
         return count;
     }
 
-    public LongLong rowHashSum() {
+    public long rowHashSum() {
         return rowHashSum;
     }
 
     public Cell copy() {
-        return new Cell(Arrays.copyOf(keySums(), keySums().length), rowHashSum().copy(), getCount());
+        return new Cell(Arrays.copyOf(keySums(), keySums().length), rowHashSum(), getCount());
     }
 
     @Override
@@ -189,7 +188,7 @@ public class Cell {
                 keySums[keyIndex] = ByteBufSerializer.long64.decode(byteBuf);
             }
             return new Cell(
-                    keySums, new LongLong(new String(ByteBufSerializer.byteArray.decode(byteBuf))), ByteBufSerializer.long64.decode(byteBuf));
+                    keySums, ByteBufSerializer.long64.decode(byteBuf), ByteBufSerializer.long64.decode(byteBuf));
         }
 
         @Override
@@ -197,7 +196,7 @@ public class Cell {
             for (int keyIndex = 0; keyIndex < cell.keySums.length; keyIndex++) {
                 ByteBufSerializer.long64.encode(cell.keySums()[keyIndex], byteBuf);
             }
-            ByteBufSerializer.byteArray.encode(cell.rowHashSum().getValue().getBytes(StandardCharsets.UTF_8), byteBuf);
+            ByteBufSerializer.long64.encode(cell.rowHashSum(), byteBuf);
             ByteBufSerializer.long64.encode(cell.getCount(), byteBuf);
         }
 

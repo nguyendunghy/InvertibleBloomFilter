@@ -4,9 +4,9 @@ import java.util.Arrays;
 
 public class IBFDecodeResultElement {
     public final long[] keySum;
-    public final LongLong rowHashSum;
+    public final long rowHashSum;
 
-    public IBFDecodeResultElement(long[] keySum, LongLong rowHashSum) {
+    public IBFDecodeResultElement(long[] keySum, long rowHashSum) {
         this.keySum = keySum;
         this.rowHashSum = rowHashSum;
     }
@@ -15,7 +15,7 @@ public class IBFDecodeResultElement {
         return keySum;
     }
 
-    public LongLong getRowHashSum() {
+    public long getRowHashSum() {
         return rowHashSum;
     }
 

@@ -40,21 +40,12 @@ public class OneHashingBloomFilterUtils {
 //    }
 
 
-    public static Function<LongLong, long[]> indexHashes(long[] divisors) {
+    public static Function<Long, long[]> indexHashes(long[] divisors) {
         long[] offsets = partitionOffsets(divisors);
-
-       if(Constant.IBF_DB_AGG){
-           return rowHashSum ->
-                   IntStream.range(0, divisors.length)
-                           .mapToLong(i -> Math.abs(rowHashSum.mod(divisors[i]) + offsets[i]))
-                           .toArray();
-       }else{
-           return rowHashSum ->
-                   IntStream.range(0, divisors.length)
-                           .mapToLong(i -> Math.abs(rowHashSum.longValue() % divisors[i] + offsets[i]))
-                           .toArray();
-       }
-
+        return rowHashSum ->
+                IntStream.range(0, divisors.length)
+                        .mapToLong(i -> Math.abs(rowHashSum.longValue() % divisors[i] + offsets[i]))
+                        .toArray();
     }
 
     public static long[] resizingDivisors(int k, int smallCellCount, int[] resizingFactors) {

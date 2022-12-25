@@ -260,11 +260,11 @@ public class InvertibleBloomFilterTest {
 
     private void addRecord(long id, InvertibleBloomFilter ibf) {
         System.out.println(format("+ %d -> %s", id, str(recordsHashLookupTable.get(id))));
-        ibf.insert(new long[]{id}, new LongLong(id + ""));
+        ibf.insert(new long[]{id}, id);
     }
 
     private void removeRecord(long id, InvertibleBloomFilter ibf) {
         System.out.println(format("- %d -> %s", id, str(recordsHashLookupTable.get(id))));
-        ibf.remove(new long[]{id}, new LongLong(id + ""));
+        ibf.remove(new long[]{id}, id);
     }
 }

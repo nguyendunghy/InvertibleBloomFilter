@@ -6,7 +6,6 @@ import com.example.invertiblebloomfilter.entity.IbfData;
 import com.example.invertiblebloomfilter.entity.IbfEntity;
 import com.example.invertiblebloomfilter.ibf.Cell;
 import com.example.invertiblebloomfilter.ibf.InvertibleBloomFilter;
-import com.example.invertiblebloomfilter.ibf.LongLong;
 import com.example.invertiblebloomfilter.repo.CellRepo;
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
 import com.example.invertiblebloomfilter.repo.IbfRepo;

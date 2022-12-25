@@ -45,7 +45,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
 
                 do {
                     IbfData row = new IbfData(
-                            resultSet.getString("ROWHASH")
+                            resultSet.getLong("ROWHASH")
 
                     );
                     invertibleBloomFilter.insert(row);
@@ -97,7 +97,7 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                 IBF_QUERY,
                 (rs, rowNum) ->
                         new IbfData(
-                                rs.getString("ROWHASH"))
+                                rs.getLong("ROWHASH"))
         );
     }
 

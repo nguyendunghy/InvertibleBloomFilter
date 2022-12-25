@@ -5,7 +5,6 @@ import com.example.invertiblebloomfilter.entity.IbfData;
 import io.netty.buffer.ByteBuf;
 import org.apache.commons.lang3.StringUtils;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
@@ -17,7 +16,7 @@ public class InvertibleBloomFilter {
 
     public static final int K_INDEPENDENT_HASH_FUNCTIONS = 3;
 
-    Function<LongLong, long[]> indicesHash;
+    Function<Long, long[]> indicesHash;
 
     protected long[] divisors;
 
@@ -78,14 +77,14 @@ public class InvertibleBloomFilter {
 //                        });
         this.cells = new Cell[OneHashingBloomFilterUtils.totalCellCount(divisors)];
         for (int i = 0; i < cells.length; i++) {
-            cells[i] = new Cell(new long[this.keyLengthsSum], new LongLong(""), 0L);
+            cells[i] = new Cell(new long[this.keyLengthsSum], 0, 0L);
         }
     }
 
     /**
      * load the cell located a cellIndex with the provided values
      */
-    public void loadFromDatabase(int cellIndex, long[] keySums, LongLong rowHashSum, long count) {
+    public void loadFromDatabase(int cellIndex, long[] keySums, long rowHashSum, long count) {
         getCell(cellIndex).load(keySums, rowHashSum, count);
     }
 
@@ -95,7 +94,7 @@ public class InvertibleBloomFilter {
      * @param rowHashSum sum of the hash of a row
      * @param keySums    long[] of length elementLength
      */
-    public void insert(long[] keySums, LongLong rowHashSum) {
+    public void insert(long[] keySums, long rowHashSum) {
         for (int cellIndex : distinctHashIndices(rowHashSum)) {
             getCell(cellIndex).insert(keySums, rowHashSum);
         }
@@ -103,7 +102,7 @@ public class InvertibleBloomFilter {
 
 
     public void insert(IbfData row) {
-        LongLong rowHashNumber = row.getRowHash();
+        long rowHashNumber = row.getRowHash();
         long[] hashNumbers = new long[]{};
         insert(hashNumbers, rowHashNumber);
     }
@@ -111,7 +110,7 @@ public class InvertibleBloomFilter {
 
     public void insert(DBAggIbfData row) {
         int cellIndex = row.getCellIndex();
-        LongLong rowHashNumber = row.getRowHash();
+        long rowHashNumber = row.getRowHash();
         long count = row.getCount();
 
         this.cells[cellIndex].setCount(count);
@@ -124,7 +123,7 @@ public class InvertibleBloomFilter {
      * @param keySums    long[] of length keyLength
      * @param rowHashSum sum of the hash of a row
      */
-    public void remove(long[] keySums, LongLong rowHashSum) {
+    public void remove(long[] keySums, long rowHashSum) {
         for (int cellIndex : distinctHashIndices(rowHashSum)) {
             getCell(cellIndex).remove(keySums, rowHashSum);
         }
@@ -175,9 +174,9 @@ public class InvertibleBloomFilter {
 
             Cell pureCell = getCell(index).copy();
             if (pureCell.getCount() > 0) {
-                result.aWithoutB.add(new IBFDecodeResultElement(pureCell.keySums(), pureCell.rowHashSum().copy()));
+                result.aWithoutB.add(new IBFDecodeResultElement(pureCell.keySums(), pureCell.rowHashSum()));
             } else {
-                result.bWithoutA.add(new IBFDecodeResultElement(pureCell.keySums(), pureCell.rowHashSum().copy()));
+                result.bWithoutA.add(new IBFDecodeResultElement(pureCell.keySums(), pureCell.rowHashSum()));
             }
 
             for (int cellIndex : distinctHashIndices(pureCell.rowHashSum())) {
@@ -272,7 +271,7 @@ public class InvertibleBloomFilter {
 //        return Arrays.stream(indicesHash.apply(rowHashSum)).mapToInt(Math::toIntExact).toArray();
 //    }
 
-    private int[] distinctHashIndices(LongLong rowHashSum) {
+    private int[] distinctHashIndices(long rowHashSum) {
         return Arrays.stream(indicesHash.apply(rowHashSum)).mapToInt(Math::toIntExact).toArray();
     }
 
@@ -311,7 +310,7 @@ public class InvertibleBloomFilter {
         sb.append(StringUtils.rightPad("value", 6, ' ') + ": ");
         for (int index = 0; index < _cells.length; index++) {
             Cell cell = _cells[index];
-            sb.append(StringUtils.rightPad(String.valueOf(cell.rowHashSum().isEmpty() ? "N/A" : cell.rowHashSum()), 5, ' '));
+            sb.append(StringUtils.rightPad(String.valueOf(cell.rowHashSum() == 0 ? "N/A" : cell.rowHashSum()), 5, ' '));
         }
         return sb.toString();
     }
@@ -336,7 +335,7 @@ public class InvertibleBloomFilter {
                 for (int keyIndex = 0; keyIndex < keyLengthSum; keyIndex++) {
                     keySums[keyIndex] = ByteBufSerializer.long64.decode(byteBuf);
                 }
-                LongLong rowHashSum = new LongLong(new String(ByteBufSerializer.byteArray.decode(byteBuf)));
+                long rowHashSum = ByteBufSerializer.long64.decode(byteBuf);
                 long count = ByteBufSerializer.long64.decode(byteBuf);
 
                 ibf.loadFromDatabase(cellIndex, keySums, rowHashSum, count);
@@ -356,7 +355,7 @@ public class InvertibleBloomFilter {
                 for (int keyIndex = 0; keyIndex < ibf.keyLengthsSum; keyIndex++) {
                     ByteBufSerializer.long64.encode(ibf.getCell(cellIndex).keySums()[keyIndex], byteBuf);
                 }
-                ByteBufSerializer.byteArray.encode(ibf.getCell(cellIndex).rowHashSum().getValue().getBytes(StandardCharsets.UTF_8), byteBuf);
+                ByteBufSerializer.long64.encode(ibf.getCell(cellIndex).rowHashSum(), byteBuf);
                 ByteBufSerializer.long64.encode(ibf.getCell(cellIndex).getCount(), byteBuf);
             }
         }

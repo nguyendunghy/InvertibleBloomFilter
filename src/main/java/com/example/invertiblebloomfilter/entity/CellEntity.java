@@ -1,6 +1,5 @@
 package com.example.invertiblebloomfilter.entity;
 
-import com.example.invertiblebloomfilter.ibf.LongLong;
 import lombok.*;
 
 @Builder
