@@ -22,17 +22,17 @@ public class StrataEstimator {
         }
     }
 
-    public void loadFromDatabase(int strata, int cellIndex, long[] keySum, LongLong keyHash, long count) {
+    public void loadFromDatabase(int strata, int cellIndex, long[] keySum, long keyHash, long count) {
         stratum[strata].getCell(cellIndex).load(keySum, keyHash, count);
     }
 
-    public void insert(long[] key, LongLong keyHash) {
+    public void insert(long[] key, long keyHash) {
         int partition = getNumberOfTrailingZeroes(keyHash);
         stratum[partition].insert(key, keyHash);
     }
 
-    private int getNumberOfTrailingZeroes(LongLong x) {
-        return x == null || x.isEmpty() ? 0 : Long.numberOfTrailingZeros(x.longValue());
+    private int getNumberOfTrailingZeroes(long x) {
+        return x == 0 ? 0 : Long.numberOfTrailingZeros(x);
     }
 
     public static StrataEstimatorDecodeResult estimateDifference(StrataEstimator seA, StrataEstimator seB) {

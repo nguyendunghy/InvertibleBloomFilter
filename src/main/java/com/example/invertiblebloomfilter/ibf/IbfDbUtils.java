@@ -41,8 +41,7 @@ public class IbfDbUtils {
         throw new IllegalStateException("Utility class");
     }
 
-
-    public static void loadInvertibleBloomFilterFromResultSet(InvertibleBloomFilter ibf, ResultSet rs)
+    public static void loadInvertibleBloomFilterFromResultSet(ResizableInvertibleBloomFilter ibf, ResultSet rs)
             throws SQLException {
         int keyLengthsSum = ibf.keyLengthsSum();
         while (rs.next()) {
@@ -52,11 +51,28 @@ public class IbfDbUtils {
             for (int i = 0; i < keyLengthsSum; i++) {
                 keySums[i] = rs.getLong(columnIndex++);
             }
-            String rowHashSum = rs.getString(columnIndex++);
+            long rowHashSum = rs.getLong(columnIndex++);
             long cCount = rs.getLong(columnIndex);
-            ibf.loadFromDatabase(cellIndex, keySums, new LongLong(rowHashSum), cCount);
+            ibf.loadFromDatabase(cellIndex, keySums, rowHashSum, cCount);
         }
     }
+
+    public static void loadInvertibleBloomFilterFromResultSet(InvertibleBloomFilter ibf, ResultSet rs)
+            throws SQLException {
+        int keyLengthsSum = ibf.keyLengthsSum();
+        while (rs.next()) {
+            int columnIndex = 1;
+            int cellIndex = rs.getInt(columnIndex++);
+            long[] keySums = new long[keyLengthsSum];
+            /*for (int i = 0; i < keyLengthsSum; i++) {
+                keySums[i] = rs.getLong(columnIndex++);
+            }*/
+            long rowHashSum = rs.getLong(columnIndex++);
+            long cCount = rs.getLong(columnIndex);
+            ibf.loadFromDatabase(cellIndex, keySums, rowHashSum, cCount);
+        }
+    }
+
 
     public static void loadIntermediateRowsFromResultSet(
             int keyLengthsSum, List<IbfCompareIntermediateRow> rows, ResultSet rs) throws SQLException {
@@ -76,6 +92,25 @@ public class IbfDbUtils {
         }
     }
 
+    public static void loadInvertibleBloomFilterFromResultSetWithInt(InvertibleBloomFilter ibf, ResultSet rs)
+            throws SQLException {
+        int keyLengthsSum = ibf.keyLengthsSum();
+        while (rs.next()) {
+            int columnIndex = 1;
+            int cellIndex = rs.getInt(columnIndex++);
+            long[] keySums = new long[keyLengthsSum];
+            for (int i = 0; i < keyLengthsSum; i++) {
+                keySums[i] = rs.getInt(columnIndex++);
+            }
+            int rowHashSumHi = rs.getInt(columnIndex++);
+            int rowHashSumLo = rs.getInt(columnIndex++);
+            long rowHashSum = concatToLong(rowHashSumHi, rowHashSumLo);
+
+            long cCount = rs.getLong(columnIndex);
+            ibf.loadFromDatabase(cellIndex, keySums, rowHashSum, cCount);
+        }
+    }
+
     public static void loadPrimaryKeyStrataEstimatorFromResultSet(StrataEstimator se, ResultSet rs)
             throws SQLException {
         int keySumsLength = computeKeyLengthsSum(se.keyLengths);
@@ -87,11 +122,11 @@ public class IbfDbUtils {
             for (int i = 0; i < keySumsLength; i++) {
                 keySums[i] = rs.getLong(columnIndex++);
             }
-            String keyHashSum = rs.getString(columnIndex++);
+            long keyHashSum = rs.getLong(columnIndex++);
             long cCount = rs.getLong(columnIndex);
 
             se.loadFromDatabase(
-                    STRATA_ESTIMATOR_MOD_37_BIT_POSITION[strataIndexForLookup], cellIndex, keySums, new LongLong(keyHashSum), cCount);
+                    STRATA_ESTIMATOR_MOD_37_BIT_POSITION[strataIndexForLookup], cellIndex, keySums, keyHashSum, cCount);
         }
     }
 

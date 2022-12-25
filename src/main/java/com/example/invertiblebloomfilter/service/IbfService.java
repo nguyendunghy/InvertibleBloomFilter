@@ -59,7 +59,7 @@ public class IbfService {
             ibf.loadFromDatabase(
                     cell.getCellIndex().intValue(),
                     split(cell.getKeySums()),
-                    new LongLong(cell.getRowHashSum()),
+                    Long.parseLong(cell.getRowHashSum()),
                     cell.getCount());
         }
 
@@ -95,7 +95,7 @@ public class IbfService {
             cellEntity.setId(maxId + count + 1);
             cellEntity.setIbfId(ibfId);
             cellEntity.setCellIndex((long) count);
-            cellEntity.setRowHashSum(cell.rowHashSum().getValue());
+            cellEntity.setRowHashSum(cell.rowHashSum() + "");
             String keySum = join(cell.keySums());
             cellEntity.setKeySums(keySum);
             cellEntity.setCount(cell.getCount());

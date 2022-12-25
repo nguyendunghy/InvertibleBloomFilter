@@ -21,9 +21,7 @@ public class SEInvertibleBloomFilter extends InvertibleBloomFilter {
         Cell cell = getCell(cellIndex);
         if (cell == null) return false;
         if (!cell.isSingular()) return false;
-        if(!cell.rowHashSum().isEmpty()) return false;
 
-//        return StrataEstimatorUtils.md5Hash52bit(this.keyTypes, this.keyLengths, cell.keySums()) == cell.rowHashSum();
-        return true;
+        return StrataEstimatorUtils.md5Hash52bit(this.keyTypes, this.keyLengths, cell.keySums()) == cell.rowHashSum();
     }
 }
