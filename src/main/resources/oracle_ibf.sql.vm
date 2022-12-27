@@ -83,12 +83,7 @@ FROM(SELECT #columns()
     TO_NUMBER("_ibf_row_hash",'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')  AS "_ibf_row_hash_number",
     #set($endIndex = $rowHashPortionNumber - 1)
     #foreach($i in [0..$endIndex])
-        TO_NUMBER(SUBSTR("_ibf_row_hash", 1 + $portionLength * $i, $portionLength),'XXXXXXXX')  AS "_ibf_row_hash_number$i",
-    #end
-    #set($endIndex = $tableColumns.size() - 1)
-    #foreach($i in [0..$endIndex])
-        #if($i > 0),#end
-        #to_number_md5_128bits("_ibf_column$i") AS "_ibf_column$i"
+        TO_NUMBER(SUBSTR("_ibf_row_hash", 1 + $portionLength * $i, $portionLength),'XXXXXXXX')  AS "_ibf_row_hash_number$i"#if($i < $endIndex),#end
     #end
 #end
 
@@ -269,10 +264,7 @@ FROM(SELECT #columns()
            "_ibf_row_hash_number",
         #set($endIndex = $tableColumns.size() - 1)
         #foreach($i in [0..$endIndex])
-           "_ibf_row_hash_number$i",
-        #end
-        #foreach($i in [0..$endIndex])
-           "_ibf_column$i"#if($i < $endIndex),#end
+           "_ibf_row_hash_number$i"#if($i < $endIndex),#end
         #end
     FROM (SELECT "_ibf_hash_index",
               #to_number_columns()
