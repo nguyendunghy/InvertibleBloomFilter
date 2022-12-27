@@ -240,15 +240,17 @@ FROM(SELECT #columns()
 #end
 
 #macro(queryWithoutCartesianJoin)
-    #foreach($pIndex in [0..2])
-    SELECT ABS(MOD("_ibf_row_hash", $primeDivisors[$pIndex])) + $partitionOffsets[$pIndex] as "_ibf_cell_index",
-           "_ibf_row_hash",
-        #set($endIndex = $tableColumns.size() - 1)
+    #set($numberPrime = $primeDivisors.size() - 1)
+    #foreach($pIndex in [0..$numberPrime])
+    SELECT ABS(MOD("_ibf_row_hash_number", $primeDivisors[$pIndex])) + $partitionOffsets[$pIndex] as "_ibf_cell_index",
+           "_ibf_row_hash_number",
         #foreach($i in [0..$endIndex])
-           "_ibf_column$i"#if($i < $endIndex),#end
+            "_ibf_row_hash_number$i"#if($i < $endIndex),#end
         #end
+    FROM (SELECT #to_number_columns()
     FROM (SELECT #columns()
-          FROM $table)
+          FROM $table
+         ))
         #if($pIndex < 2)
     UNION ALL
         #end

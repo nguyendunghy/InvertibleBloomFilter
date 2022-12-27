@@ -27,7 +27,7 @@ public class VelocityUtils {
         hashMap.put("useConnectorAggregation", false);
         hashMap.put("useXOR", true);
         hashMap.put("useLegacyRowHash", true);
-        hashMap.put("fastIbfQuery", false);
+        hashMap.put("fastIbfQuery", true);
         hashMap.put("oracleVersion", Integer.parseInt(PropertyUtils.get("oracle.version")));
         hashMap.put("output", "#" + outputFunc + "()");
 
