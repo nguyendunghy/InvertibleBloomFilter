@@ -25,9 +25,9 @@ public class VelocityUtils {
         hashMap.put("rowHashPortionNumber",4);
         hashMap.put("portionLength",8);
         hashMap.put("useConnectorAggregation", false);
-        hashMap.put("useXOR", false);
+        hashMap.put("useXOR", true);
         hashMap.put("useLegacyRowHash", true);
-        hashMap.put("fastIbfQuery", true);
+        hashMap.put("fastIbfQuery", false);
         hashMap.put("oracleVersion", Integer.parseInt(PropertyUtils.get("oracle.version")));
         hashMap.put("output", "#" + outputFunc + "()");
 

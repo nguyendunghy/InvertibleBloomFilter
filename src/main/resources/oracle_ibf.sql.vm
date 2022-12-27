@@ -30,12 +30,11 @@
 
 #macro(invertibleBloomFilterWithDBAggregation)
     SELECT "_ibf_cell_index",
-        #aggregate("_ibf_row_hash"),
         #set($endIndex = $tableColumns.size() - 1)
         #foreach($i in [0..$endIndex])
-            #aggregate("_ibf_column$i"),
+            #aggregate("_ibf_row_hash_number$i"),
         #end
-        COUNT ("_ibf_row_hash") AS "count"
+        COUNT ("_ibf_row_hash_number") AS "count"
     FROM (
         #if($fastIbfQuery)
             #queryWithoutCartesianJoin()
@@ -77,6 +76,19 @@ FROM(SELECT #columns()
         #end
         #if($i > 0),#end #md5_128bits($stringifiedColumn)
         AS "_ibf_column$i"
+    #end
+#end
+
+#macro(to_number_columns)
+    TO_NUMBER("_ibf_row_hash",'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')  AS "_ibf_row_hash_number",
+    #set($endIndex = $rowHashPortionNumber - 1)
+    #foreach($i in [0..$endIndex])
+        TO_NUMBER(SUBSTR("_ibf_row_hash", 1 + $portionLength * $i, $portionLength),'XXXXXXXX')  AS "_ibf_row_hash_number$i",
+    #end
+    #set($endIndex = $tableColumns.size() - 1)
+    #foreach($i in [0..$endIndex])
+        #if($i > 0),#end
+        #to_number_md5_128bits("_ibf_column$i") AS "_ibf_column$i"
     #end
 #end
 
@@ -191,23 +203,15 @@ FROM(SELECT #columns()
     #if($oracleVersion < 12)
         TO_NUMBER(SUBSTR(DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner)), 1, 15), 'XXXXXXXXXXXXXXX')
     #else
-        TO_NUMBER(SUBSTR(#md5($inner), 1, 15), 'XXXXXXXXXXXXXXX')
+        TO_NUMBER(SUBSTR(STANDARD_HASH("$inner", 'MD5'), 1, 15), 'XXXXXXXXXXXXXXX')
     #end
 #end
 
 #macro(md5_128bits $inner)
-    #if($useConnectorAggregation)
-        #if($oracleVersion < 12)
+    #if($oracleVersion < 12)
             DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner))
-        #else
-            #md5($inner)
-        #end
     #else
-        #if($oracleVersion < 12)
-            TO_NUMBER(DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner)),'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
-        #else
-            TO_NUMBER(#md5($inner),'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
-        #end
+        #md5($inner)
     #end
 #end
 
@@ -215,7 +219,7 @@ FROM(SELECT #columns()
     #if($oracleVersion < 12)
         TO_NUMBER(DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner)),'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
     #else
-        TO_NUMBER(#md5($inner),'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+        TO_NUMBER(STANDARD_HASH("$inner", 'MD5'),'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
     #end
 #end
 
@@ -230,9 +234,9 @@ FROM(SELECT #columns()
 
 #macro(aggregate $column)
     #if ($useXOR)
-        FT_BITXOR("$column") AS #concatString($column,'_number')
+        FT_BITXOR("$column") AS #concatString($column,'_xor')
     #else
-        SUM("$column") AS #concatString($column,'_number')
+        SUM("$column") AS #concatString($column,'_sum')
     #end
 #end
 
@@ -258,18 +262,23 @@ FROM(SELECT #columns()
 
 #macro(queryWithCartesianJoin)
     SELECT CASE "_ibf_hash_index"
-               WHEN 0 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[0]))
-               WHEN 1 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[1])) + $partitionOffsets[1]
-               WHEN 2 THEN ABS(MOD("_ibf_row_hash", $primeDivisors[2])) + $partitionOffsets[2]
+               WHEN 0 THEN ABS(MOD("_ibf_row_hash_number", $primeDivisors[0]))
+               WHEN 1 THEN ABS(MOD("_ibf_row_hash_number", $primeDivisors[1])) + $partitionOffsets[1]
+               WHEN 2 THEN ABS(MOD("_ibf_row_hash_number", $primeDivisors[2])) + $partitionOffsets[2]
                END as "_ibf_cell_index",
-           "_ibf_row_hash",
+           "_ibf_row_hash_number",
         #set($endIndex = $tableColumns.size() - 1)
+        #foreach($i in [0..$endIndex])
+           "_ibf_row_hash_number$i",
+        #end
         #foreach($i in [0..$endIndex])
            "_ibf_column$i"#if($i < $endIndex),#end
         #end
     FROM (SELECT "_ibf_hash_index",
-              #columns()
-          FROM $table,
-              (SELECT 0 as "_ibf_hash_index" from dual UNION ALL SELECT 1 from dual UNION ALL SELECT 2 from dual))
+              #to_number_columns()
+          FROM (SELECT #columns()
+                FROM $table
+               ),
+               (SELECT 0 as "_ibf_hash_index" from dual UNION ALL SELECT 1 from dual UNION ALL SELECT 2 from dual))
 #end
 
