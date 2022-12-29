@@ -124,7 +124,7 @@ public class Cell {
 
 
     private long aggregate(long x, long y, boolean insert) {
-        if (Constant.IBF_DB_AGG) {
+        if (!Constant.IBF_DB_AGG_XOR) {
             return insert ? x + y : x - y;
         }
 
@@ -163,6 +163,14 @@ public class Cell {
 
     public long rowHashSum() {
         return rowHashSum;
+    }
+
+    public long buildBackRowHash(){
+        String rowHashString = "";
+        for(long ele: keySums){
+            rowHashString += Long.toHexString(ele);
+        }
+        return Long.parseLong(rowHashString,16);
     }
 
     public Cell copy() {

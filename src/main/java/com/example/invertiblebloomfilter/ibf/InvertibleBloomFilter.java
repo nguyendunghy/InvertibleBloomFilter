@@ -28,6 +28,7 @@ public class InvertibleBloomFilter {
     public InvertibleBloomFilter() {
     }
 
+
     public void setCells(Cell[] cells) {
         this.cells = cells;
     }
@@ -110,11 +111,12 @@ public class InvertibleBloomFilter {
 
     public void insert(DBAggIbfData row) {
         int cellIndex = row.getCellIndex();
-        long rowHashNumber = row.getRowHash();
+        long[] rowHash = row.getRowHash();
         long count = row.getCount();
 
         this.cells[cellIndex].setCount(count);
-        this.cells[cellIndex].setRowHashSum(rowHashNumber);
+        this.cells[cellIndex].setKeySums(rowHash);
+        this.cells[cellIndex].setRowHashSum(0);
     }
 
     /**
@@ -227,7 +229,7 @@ public class InvertibleBloomFilter {
             return false;
         }
 
-        int[] hashIndices = distinctHashIndices(getCell(cellIndex).rowHashSum());
+        int[] hashIndices = distinctHashIndices(getCell(cellIndex).buildBackRowHash());
 
         for (int i = 0; i < K_INDEPENDENT_HASH_FUNCTIONS; i++) {
             if (hashIndices[i] == cellIndex) {

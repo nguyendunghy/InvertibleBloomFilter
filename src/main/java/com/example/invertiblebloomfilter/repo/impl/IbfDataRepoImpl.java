@@ -1,13 +1,15 @@
 package com.example.invertiblebloomfilter.repo.impl;
 
-import com.example.invertiblebloomfilter.entity.DBAggIbfData;
 import com.example.invertiblebloomfilter.entity.DataTable;
 import com.example.invertiblebloomfilter.entity.IbfData;
 import com.example.invertiblebloomfilter.ibf.*;
+import com.example.invertiblebloomfilter.repo.DatabaseRowCallBackHandler;
+import com.example.invertiblebloomfilter.repo.FileRowCallBackHandler;
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
 import com.example.invertiblebloomfilter.velocity.VelocityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Repository;
 
 import java.util.Arrays;
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.example.invertiblebloomfilter.repo.Sql.*;
+import static com.example.invertiblebloomfilter.utils.Constant.SPRING_DATA_FROM_FILE;
 
 @Repository
 public class IbfDataRepoImpl implements IbfDataRepo {
@@ -72,23 +75,34 @@ public class IbfDataRepoImpl implements IbfDataRepo {
                         invertibleBloomFilter.getDivisors(), "invertibleBloomFilter");
             }
 
-            jdbcTemplate.query(ibfQuery, resultSet -> {
-
-                do {
-                    DBAggIbfData row = new DBAggIbfData(
-                            resultSet.getInt("_ibf_cell_index"),
-                            resultSet.getLong("_ibf_row_hash_number"),
-                            resultSet.getLong("count")
-                    );
-                    invertibleBloomFilter.insert(row);
-                } while (resultSet.next());
-
-                System.out.println(invertibleBloomFilter);
-            });
+            handleRow(ibfQuery, invertibleBloomFilter);
 
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    private void handleRow(String ibfQuery, InvertibleBloomFilter invertibleBloomFilter) throws Exception {
+        if (SPRING_DATA_FROM_FILE) {
+            RowCallbackHandler streamDbAggIbfDataRowCallBackHandler = new FileRowCallBackHandler(invertibleBloomFilter);
+            streamDbAggIbfDataRowCallBackHandler.processRow(null);
+        } else {
+            int numberOfColumns = getColumnLength(invertibleBloomFilter);
+            RowCallbackHandler streamDbAggIbfDataRowCallBackHandler = new DatabaseRowCallBackHandler(numberOfColumns, invertibleBloomFilter);
+            jdbcTemplate.query(ibfQuery, streamDbAggIbfDataRowCallBackHandler);
+
+        }
+    }
+
+    private int getColumnLength(InvertibleBloomFilter ibf) {
+        Cell[] arrCell = ibf.getCells();
+        for (Cell cell : arrCell) {
+            if (!cell.isZero()) {
+                return cell.getKeySums().length;
+            }
+        }
+
+        return 4;
     }
 
     @Override

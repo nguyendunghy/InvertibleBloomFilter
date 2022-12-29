@@ -11,6 +11,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class DBAggIbfData {
     private int cellIndex;
-    private long rowHash;
+    private long rowHash[];
     private long count;
 }

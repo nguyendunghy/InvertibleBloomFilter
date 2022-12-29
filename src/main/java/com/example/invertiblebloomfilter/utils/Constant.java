@@ -6,6 +6,11 @@ public class Constant {
 
     public static final boolean IBF_DB_AGG = new Boolean(PropertyUtils.get("ibf.db.aggregator"));
 
+    public static final boolean IBF_DB_AGG_XOR = new Boolean(PropertyUtils.get("ibf.db.aggregator.operator.xor"));
+
+    public static final boolean SPRING_DATA_FROM_FILE = new Boolean(PropertyUtils.get("spring.data.from.file"));
+    public static final String SPRING_DATA_FILE_PATH = PropertyUtils.get("spring.data.file.path");
+
     public static final long INTERNAL_ERROR = 404L;
     public static Long SAVE_USER_REQUEST_NULL = 1000L;
     public static final Long SAVE_USER_REQUEST_NAME_NULL = 1001L;

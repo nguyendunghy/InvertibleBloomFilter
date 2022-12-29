@@ -10,6 +10,7 @@ import com.example.invertiblebloomfilter.repo.CellRepo;
 import com.example.invertiblebloomfilter.repo.IbfDataRepo;
 import com.example.invertiblebloomfilter.repo.IbfRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -25,9 +26,11 @@ public class IbfService {
     private IbfDataRepo ibfDataRepo;
 
     @Autowired
+    @Qualifier("IbfRepoFileImpl")
     private IbfRepo ibfRepo;
 
     @Autowired
+    @Qualifier("CellRepoFileImpl")
     private CellRepo cellRepo;
 
     @Value("${ibf.db.aggregator}")
@@ -66,7 +69,7 @@ public class IbfService {
         return ibf;
     }
 
-    @Transactional
+//    @Transactional
     public void saveIbf(InvertibleBloomFilter invertibleBloomFilter) {
         Long maxId = ibfRepo.getMaxId();
         Long newIbfId = maxId + 1L;
