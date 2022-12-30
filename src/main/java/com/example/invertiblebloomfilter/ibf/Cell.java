@@ -1,11 +1,10 @@
 package com.example.invertiblebloomfilter.ibf;
 
 import com.example.invertiblebloomfilter.utils.Constant;
-import com.example.invertiblebloomfilter.utils.PropertyUtils;
+import com.example.invertiblebloomfilter.utils.StringUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.netty.buffer.ByteBuf;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class Cell {
@@ -165,12 +164,12 @@ public class Cell {
         return rowHashSum;
     }
 
-    public long buildBackRowHash(){
+    public String buildStringRowHash(){
         String rowHashString = "";
         for(long ele: keySums){
-            rowHashString += Long.toHexString(ele);
+            rowHashString += StringUtils.paddingLeftZero(Long.toHexString(ele),8);
         }
-        return Long.parseLong(rowHashString,16);
+        return rowHashString;
     }
 
     public Cell copy() {

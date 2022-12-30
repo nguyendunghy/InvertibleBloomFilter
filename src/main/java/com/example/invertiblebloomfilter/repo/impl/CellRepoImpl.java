@@ -25,6 +25,13 @@ public class CellRepoImpl implements CellRepo {
     }
 
     @Override
+    public void save(List<CellEntity> cells) {
+        for(CellEntity cell: cells){
+            save(cell);
+        }
+    }
+
+    @Override
     public List<CellEntity> findAll(Long ibfId) {
         return jdbcTemplate.query(
                 RETRIEVE_CELL_BY_IBF_ID_QUERY, new Object[]{ibfId},

@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION FT_BITXOR(input NUMBER)
    RETURN NUMBER PARALLEL_ENABLE AGGREGATE
 USING FT_BITXOR_IMPL;
-
+/
 CREATE OR REPLACE TYPE FT_BITXOR_IMPL AS OBJECT (
    accum  NUMBER,
    STATIC FUNCTION ODCIAggregateInitialize(sctx IN OUT FT_BITXOR_IMPL) return number,
@@ -9,7 +9,7 @@ CREATE OR REPLACE TYPE FT_BITXOR_IMPL AS OBJECT (
    MEMBER FUNCTION ODCIAggregateMerge(self IN OUT FT_BITXOR_IMPL, ctx2 IN FT_BITXOR_IMPL) return number,
    MEMBER FUNCTION ODCIAggregateTerminate(self IN FT_BITXOR_IMPL, ReturnValue OUT NUMBER, flags IN number) return number
 );
-
+/
 create or replace type body FT_BITXOR_IMPL is
     static function ODCIAggregateInitialize(sctx IN OUT FT_BITXOR_IMPL) return number is
 begin

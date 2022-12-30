@@ -16,7 +16,7 @@ public class InvertibleBloomFilter {
 
     public static final int K_INDEPENDENT_HASH_FUNCTIONS = 3;
 
-    Function<Long, long[]> indicesHash;
+    Function<Object, long[]> indicesHash;
 
     protected long[] divisors;
 
@@ -181,7 +181,7 @@ public class InvertibleBloomFilter {
                 result.bWithoutA.add(new IBFDecodeResultElement(pureCell.keySums(), pureCell.rowHashSum()));
             }
 
-            for (int cellIndex : distinctHashIndices(pureCell.rowHashSum())) {
+            for (int cellIndex : distinctHashIndices(pureCell.buildStringRowHash())) {
                 Cell cell = getCell(cellIndex);
                 if (cell == null || cell.isZero()) continue;
 
@@ -229,7 +229,7 @@ public class InvertibleBloomFilter {
             return false;
         }
 
-        int[] hashIndices = distinctHashIndices(getCell(cellIndex).buildBackRowHash());
+        int[] hashIndices = distinctHashIndices(getCell(cellIndex).buildStringRowHash());
 
         for (int i = 0; i < K_INDEPENDENT_HASH_FUNCTIONS; i++) {
             if (hashIndices[i] == cellIndex) {
@@ -272,6 +272,10 @@ public class InvertibleBloomFilter {
 //    private int[] distinctHashIndices(long rowHashSum) {
 //        return Arrays.stream(indicesHash.apply(rowHashSum)).mapToInt(Math::toIntExact).toArray();
 //    }
+
+    private int[] distinctHashIndices(String rowHashSum) {
+        return Arrays.stream(indicesHash.apply(rowHashSum)).mapToInt(Math::toIntExact).toArray();
+    }
 
     private int[] distinctHashIndices(long rowHashSum) {
         return Arrays.stream(indicesHash.apply(rowHashSum)).mapToInt(Math::toIntExact).toArray();

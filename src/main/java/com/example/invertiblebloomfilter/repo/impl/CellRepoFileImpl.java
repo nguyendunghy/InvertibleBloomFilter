@@ -32,6 +32,21 @@ public class CellRepoFileImpl implements CellRepo {
     }
 
     @Override
+    public void save(List<CellEntity> cells) {
+        try {
+            StringBuilder json = new StringBuilder();
+            for (CellEntity cell : cells) {
+                json.append(mapper.writeValueAsString(cell)).append("\n");
+            }
+            File file = new File(filePath);
+            FileUtils.write(file, json.toString(), Charset.defaultCharset(), false);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    @Override
     public List<CellEntity> findAll(Long ibfId) {
         try {
             File file = new File(filePath);

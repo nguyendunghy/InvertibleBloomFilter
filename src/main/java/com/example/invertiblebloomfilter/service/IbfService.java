@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.example.invertiblebloomfilter.utils.StringUtils.join;
@@ -69,7 +70,7 @@ public class IbfService {
         return ibf;
     }
 
-//    @Transactional
+    //    @Transactional
     public void saveIbf(InvertibleBloomFilter invertibleBloomFilter) {
         Long maxId = ibfRepo.getMaxId();
         Long newIbfId = maxId + 1L;
@@ -93,6 +94,7 @@ public class IbfService {
     private void saveCellEntities(InvertibleBloomFilter ibf, Long ibfId) {
         Long maxId = cellRepo.getMaxId();
         int count = 0;
+        List<CellEntity> cells = new ArrayList<>();
         for (Cell cell : ibf.getCells()) {
             CellEntity cellEntity = new CellEntity();
             cellEntity.setId(maxId + count + 1);
@@ -104,8 +106,10 @@ public class IbfService {
             cellEntity.setCount(cell.getCount());
             count++;
 
-            cellRepo.save(cellEntity);
+            cells.add(cellEntity);
+
         }
+        cellRepo.save(cells);
     }
 
 

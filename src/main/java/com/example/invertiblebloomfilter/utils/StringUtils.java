@@ -24,6 +24,24 @@ public class StringUtils {
         return pattern.matcher(strNum).matches();
     }
 
+    public static String paddingLeftZero(String value, int target) {
+        if (value == null && value.isEmpty()) {
+            value = "";
+        }
+        int numZeroAdded = target - value.length();
+        if (numZeroAdded <= 0) {
+            return value;
+        }
+
+        String temp = "";
+        for (int i = 0; i < numZeroAdded; i++) {
+            temp += "0";
+        }
+
+        return temp + value;
+
+    }
+
     public static String join(long[] array) {
         if (array == null || array.length == 0) {
             return "";

@@ -41,44 +41,38 @@ public class OneHashingBloomFilterUtils {
 //    }
 
 
-    public static Function<Long, long[]> indexHashes(long[] divisors) {
+    public static Function<Object, long[]> indexHashes(long[] divisors) {
         long[] offsets = partitionOffsets(divisors);
         return rowHashSum ->
                 IntStream.range(0, divisors.length)
-                        .mapToLong(i -> Math.abs(module(rowHashSum.longValue(), divisors[i], offsets[i])))
+                        .mapToLong(i -> Math.abs(calculateIndex(rowHashSum, divisors[i], offsets[i])))
                         .toArray();
     }
 
-    private static long module(long value, long divisor, long offset) {
-        return value % divisor + offset;
-    }
-
-    private static long module(String value, long divisor, long offset) {
-        return mod(value, divisor) + offset;
-    }
-
-    private static long mod(String value, long divisor) {
-        if (StringUtils.isEmpty(value)) {
-            return 0;
+    private static long calculateIndex(Object value, long divisor, long offset) {
+        if (value == null) {
+            value = 0L;
         }
 
-        long temp = 0;
-        for (int i = 0, j = 1; i < value.length() && j <= value.length(); ) {
-            temp = Long.parseLong(temp + value.substring(i, j), 16);
-            if (temp < divisor) {
-                j++;
-                if (j > value.length()) {
-                    return temp;
-                }
-                temp = 0;
-            } else {
-                temp = temp % divisor;
-                i = j;
-                j = i + 1;
-            }
+        if (value instanceof Long) {
+            return (Long) value % divisor + offset;
         }
 
-        return temp;
+        if (value instanceof String) {
+            return mod((String) value, divisor, 16) + offset;
+        }
+
+        throw new RuntimeException("Invalid value type");
+    }
+
+
+
+    public static long mod(String value, long divisor, int radix) {
+        long res = 0;
+        for (int i = 0; i < value.length(); i++)
+            res = (res * radix + Long.parseLong(value.substring(i, i + 1), radix)) % divisor;
+
+        return res;
     }
 
     public static long[] resizingDivisors(int k, int smallCellCount, int[] resizingFactors) {
