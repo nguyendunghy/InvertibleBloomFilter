@@ -169,7 +169,7 @@ public class Cell {
         for(long ele: keySums){
             rowHashString += StringUtils.paddingLeftZero(Long.toHexString(ele),8);
         }
-        return rowHashString;
+        return rowHashString.toUpperCase();
     }
 
     public Cell copy() {
