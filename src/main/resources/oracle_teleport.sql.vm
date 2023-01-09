@@ -1,0 +1,237 @@
+#**
+ For full documentation, see "IBF Encode Algorithm" in https://docs.google.com/document/d/1pIV_NPFTDxHnKyiwgICpB7td53GChz9lFV1t2eOERtI/edit
+
+ Template parameters:
+    $primaryKeys: array of com.fivetran.integrations.oracle.meta.OracleColumnInfo
+    $keyCount: size of $primaryKeys array
+    $keyLength: int total number of columns that should represent the primary keys
+    $keyLengths: array of ints indexed to match $primaryKeys. size is also $keyCount
+    $table: TableRef
+    $columns: collection of com.fivetran.integrations.oracle.meta.OracleColumnInfo
+    $helper: com.fivetran.integrations.oracle.teleport.OracleIBFQueryBuilder.TemplateHelper
+    $primeDivisors: long[3] Provided by TeleportDbUtils
+    $cellsCount: int - Total number of hash cells - Provided by TeleportDbUtils
+    $partitionOffsets: long[3] - Provided by TeleportDbUtils
+    $dateNumberFormat: formatter to read date as a number
+*#
+#macro(invertibleBloomFilter)
+#if($useConnectorAggregation)
+#invertibleBloomFilterWithConnectorAggregation
+#else
+#invertibleBloomFilterWithDBAggregation
+#end
+#end
+
+#macro(invertibleBloomFilterWithDBAggregation)
+SELECT "_teleport_cell_index",
+#set($lastKeyIndex = $keyLength - 1)
+#foreach($i in [0..$lastKeyIndex])
+   #aggregate("_teleport_column$i"),
+#end
+   #aggregate("_teleport_row_hash"),
+   COUNT("_teleport_row_hash")
+FROM (
+#if($fastIbfQuery)
+#queryWithoutCartesianJoin
+#else
+#queryWithCartesianJoin
+#end
+) GROUP BY "_teleport_cell_index"#end
+
+#macro(invertibleBloomFilterWithConnectorAggregation)
+SELECT #columns() FROM $table
+#end
+
+######
+### Column Expressions
+######
+#macro(columns)
+#set($endKeys = $keyCount - 1)
+#set($colCount = 0)
+#foreach($i in [0..$endKeys])
+#set($primaryKey = $primaryKeys[$i])
+#set($pkLength = $keyLengths[$i])
+#pkCol($primaryKey $pkLength $colCount)
+#set($colCount = $colCount + $pkLength)
+#end
+#col2() AS "_teleport_row_hash"
+#end
+
+#macro(pkCol $primaryKey $pkLength $columnNumber)
+#if ( $helper.isNumber($primaryKey) || $helper.isDate($primaryKey))
+#intPkCol($primaryKey $columnNumber)
+#elseif ( $helper.isString($primaryKey) || $helper.isBinary($primaryKey))
+#strAndRawPkCol($primaryKey $pkLength $columnNumber)
+#end
+#end
+
+######
+### Integer primary key
+######
+#macro(intPkCol $primaryKey $columnNumber)
+        #formatColumn($primaryKey) AS "_teleport_column$columnNumber",
+#end
+
+######
+## String primary key
+######
+#macro(strAndRawPkCol $primaryKey $pkLength $columnNumber)
+#set($strPosition = 1)
+#set($end = $pkLength + $columnNumber - 1)
+#foreach($i in [$columnNumber..$end])
+        TO_NUMBER(RAWTOHEX(SUBSTR("$primaryKey.name", $strPosition, 8)), 'XXXXXXXXXXXXXXXXXXXX') AS "_teleport_column$i",
+#set($strPosition = $strPosition + 8)
+#end
+#end
+
+######
+## Formatted column
+######
+#macro(formatColumn $column)
+#if($helper.isDate($column))
+TO_NUMBER(TO_CHAR("$column.name", '$dateNumberFormat'))#else
+"$column.name"#end
+#end
+
+######
+## Row hash
+######
+#macro(col2)
+  #if($useLegacyRowHash)
+  #legacyRowHash
+  #else
+  #defaultRowHash
+  #end
+#end
+
+#macro(legacyRowHash)
+#define($rowRepresentation)
+#foreach ($column in $columns)
+##      $column is com.fivetran.integrations.oracle.meta.OracleColumnInfo
+#if ( $foreach.count > 1 ) || '|' || #end
+#stringifyNullable($column)
+#end
+#end
+#md5_60bits($rowRepresentation)
+#end
+
+#macro(defaultRowHash)
+  #define($rowRepresentation)
+    #set($cnt = 0)
+    #if($columns.size() > 120)
+        #set($endCnt = 120)
+    #else
+        #set($endCnt = $columns.size() - 1)
+    #end
+    #set($loops = $columns.size() / 121)
+    #foreach($loop in [0..$loops])
+        #define($colBatch)
+            #foreach($i in [$cnt..$endCnt])
+               #define($stringifiedCol)
+               #stringifyNullable($columns.get($i))
+               #end
+                #md5($stringifiedCol)
+                #if($i < $endCnt)
+                 ||
+                #end
+            #end
+        #end
+        #md5($colBatch)
+        #set($cnt = $endCnt + 1)
+        #if($endCnt + 121 > $columns.size())
+            #if($endCnt < $columns.size() - 1)
+                ||
+            #end
+            #set($endCnt = $columns.size() - 1)
+        #else
+            ||
+            #set($endCnt = $endCnt + 121)
+        #end
+    #end
+  #end
+#md5_60bits_stdHash($rowRepresentation)
+#end
+
+######
+## MD5 "60 bits"
+######
+#macro(md5_60bits $inner)
+       TO_NUMBER(SUBSTR(DBMS_OBFUSCATION_TOOLKIT.md5(input => RAWTOHEX($inner)), 1, 15), 'XXXXXXXXXXXXXXX')#end
+
+#macro(md5_60bits_stdHash $inner)
+        TO_NUMBER(SUBSTR(#md5($inner), 1, 15), 'XXXXXXXXXXXXXXX')#end
+
+#macro(md5 $input)
+STANDARD_HASH($input, 'MD5')#end
+
+######
+## Stringify any nullable column
+## $column: OracleColumnInfo
+######
+#macro(stringifyNullable $column)
+#if ($column.isAddedSinceLastSync())
+    ## Does column have a default value?
+    #if ($column.getDefaultValue().isPresent())
+#stringifyDefault($column, $column.getDefaultValue().get())#else
+''#end
+#else
+COALESCE(#stringify($column), '')#end
+#end
+
+#macro(stringify $column)
+#if ($helper.isBinary($column))
+RAWTOHEX("$column.name")#elseif ($helper.isString($column))
+"$column.name"#elseif ( $helper.isDate($column))
+TO_CHAR("$column.name", '$dateNumberFormat')#else
+TO_CHAR("$column.name")#end
+#end
+
+#macro(stringifyDefault $column, $defaultValue)
+#if ($helper.isBinary($column))
+RAWTOHEX($defaultValue)#elseif ($helper.isString($column))
+$helper.escapeDefaultValue($defaultValue)#elseif ( $helper.isDate($column))
+TO_CHAR($defaultValue, '$dateNumberFormat')#else
+TO_CHAR($defaultValue)#end
+#end
+
+#macro(aggregate $column)
+#if ($useXOR)
+FT_BITXOR("$column")#else
+MOD(SUM("$column"),$moduloDivisor)#end
+#end
+
+#macro(queryWithoutCartesianJoin)
+#foreach($pIndex in [0..2])
+SELECT ABS(MOD("_teleport_row_hash", $primeDivisors[$pIndex])) + $partitionOffsets[$pIndex] as "_teleport_cell_index",
+#foreach($i in [0..$lastKeyIndex])
+    "_teleport_column$i",
+#end
+    "_teleport_row_hash"
+FROM (
+    SELECT #columns() FROM $table)
+#if($pIndex < 2)
+UNION ALL
+#end
+#end
+#end
+
+#macro(queryWithCartesianJoin)
+SELECT
+    CASE "_teleport_hash_index"
+        WHEN 0 THEN ABS(MOD("_teleport_row_hash", $primeDivisors[0]))
+        WHEN 1 THEN ABS(MOD("_teleport_row_hash", $primeDivisors[1])) + $partitionOffsets[1]
+        WHEN 2 THEN ABS(MOD("_teleport_row_hash", $primeDivisors[2])) + $partitionOffsets[2]
+    END as "_teleport_cell_index",
+#foreach($i in [0..$lastKeyIndex])
+    "_teleport_column$i",
+#end
+    "_teleport_row_hash"
+FROM (
+    SELECT
+        "_teleport_hash_index",
+#columns()
+    FROM $table,
+        (SELECT 0 as "_teleport_hash_index" from dual UNION ALL SELECT 1 from dual UNION ALL SELECT 2 from dual)
+)
+#end
+
