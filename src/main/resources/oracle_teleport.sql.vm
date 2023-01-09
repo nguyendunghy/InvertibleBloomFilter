@@ -16,9 +16,9 @@
 *#
 #macro(invertibleBloomFilter)
 #if($useConnectorAggregation)
-#invertibleBloomFilterWithConnectorAggregation
+#invertibleBloomFilterWithConnectorAggregation()
 #else
-#invertibleBloomFilterWithDBAggregation
+#invertibleBloomFilterWithDBAggregation()
 #end
 #end
 
@@ -32,9 +32,9 @@ SELECT "_teleport_cell_index",
    COUNT("_teleport_row_hash")
 FROM (
 #if($fastIbfQuery)
-#queryWithoutCartesianJoin
+#queryWithoutCartesianJoin()
 #else
-#queryWithCartesianJoin
+#queryWithCartesianJoin()
 #end
 ) GROUP BY "_teleport_cell_index"#end
 
@@ -98,9 +98,9 @@ TO_NUMBER(TO_CHAR("$column.name", '$dateNumberFormat'))#else
 ######
 #macro(col2)
   #if($useLegacyRowHash)
-  #legacyRowHash
+  #legacyRowHash()
   #else
-  #defaultRowHash
+  #defaultRowHash()
   #end
 #end
 
