@@ -50,13 +50,10 @@
 SELECT
     #set($endIndex = $rowHashPortionNumber - 1)
     #foreach($i in [0..$endIndex])
-        TO_NUMBER(SUBSTR("_teleport_row_hash", 1 + $portionLength * $i, $portionLength),
-                  'XXXXXXXX')                                          AS "_teleport_column_number$i",
+        TO_NUMBER(SUBSTR("_fivetran_id", 1 + $portionLength * $i, $portionLength),'XXXXXXXX') AS "_teleport_column_number$i",
     #end
-        TO_NUMBER("_teleport_row_hash", 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX') AS "_teleport_row_hash_number"
-FROM(SELECT DISTINCT #columns()
-     FROM $table
-)
+        TO_NUMBER("_fivetran_id", 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX') AS "_teleport_row_hash_number"
+FROM TEMP_$table
 #end
 
 ######
@@ -66,11 +63,25 @@ FROM(SELECT DISTINCT #columns()
     #createRowHashCol() AS "_teleport_row_hash"
 #end
 
+#macro(dropTempTable)
+    DROP TABLE TEMP_$table;
+#end
+
+#macro(createTempTable)
+    CREATE TABLE TEMP_$table AS SELECT DISTINCT #createRowHashCol() AS "_fivetran_id",
+        #foreach ($column in $tableColumns)
+            #if ( $foreach.count > 1 ),#end
+            #stringifyNullable($column) as "$column.name"
+        #end
+
+    FROM $table
+#end
+
 #macro(to_number_columns)
-    TO_NUMBER(SUBSTR("_teleport_row_hash", 1, 15),'XXXXXXXXXXXXXXX')  AS "_teleport_row_hash_number",
+    TO_NUMBER(SUBSTR("_fivetran_id", 1, 15),'XXXXXXXXXXXXXXX')  AS "_teleport_row_hash_number",
     #set($endIndex = $rowHashPortionNumber - 1)
     #foreach($i in [0..$endIndex])
-        TO_NUMBER(SUBSTR("_teleport_row_hash", 1 + $portionLength * $i, $portionLength),'XXXXXXXX')  AS "_teleport_column_number$i"#if($i < $endIndex),#end
+        TO_NUMBER(SUBSTR("_fivetran_id", 1 + $portionLength * $i, $portionLength),'XXXXXXXX')  AS "_teleport_column_number$i"#if($i < $endIndex),#end
     #end
 #end
 
@@ -229,11 +240,9 @@ FROM(SELECT DISTINCT #columns()
 #macro(queryWithoutCartesianJoin)
     #set($numberPrime = $primeDivisors.size() - 1)
     #foreach($pIndex in [0..$numberPrime])
-    SELECT ABS(MOD(TO_NUMBER(SUBSTR("_teleport_row_hash", 1, 15),'XXXXXXXXXXXXXXX'), $primeDivisors[$pIndex])) + $partitionOffsets[$pIndex] as "_teleport_cell_index",
+    SELECT ABS(MOD(TO_NUMBER(SUBSTR("_fivetran_id", 1, 15),'XXXXXXXXXXXXXXX'), $primeDivisors[$pIndex])) + $partitionOffsets[$pIndex] as "_teleport_cell_index",
         #to_number_columns()
-    FROM (SELECT DISTINCT #columns()
-          FROM $table
-         )
+    FROM TEMP_$table
         #if($pIndex < 2)
     UNION ALL
         #end
@@ -243,14 +252,12 @@ FROM(SELECT DISTINCT #columns()
 #macro(queryWithCartesianJoin)
     SELECT
         CASE "_teleport_hash_index"
-            WHEN 0 THEN ABS(MOD(TO_NUMBER(SUBSTR("_teleport_row_hash", 1, 15),'XXXXXXXXXXXXXXX'), $primeDivisors[0]))
-            WHEN 1 THEN ABS(MOD(TO_NUMBER(SUBSTR("_teleport_row_hash", 1, 15),'XXXXXXXXXXXXXXX'), $primeDivisors[1])) + $partitionOffsets[1]
-            WHEN 2 THEN ABS(MOD(TO_NUMBER(SUBSTR("_teleport_row_hash", 1, 15),'XXXXXXXXXXXXXXX'), $primeDivisors[2])) + $partitionOffsets[2]
+            WHEN 0 THEN ABS(MOD(TO_NUMBER(SUBSTR("_fivetran_id", 1, 15),'XXXXXXXXXXXXXXX'), $primeDivisors[0]))
+            WHEN 1 THEN ABS(MOD(TO_NUMBER(SUBSTR("_fivetran_id", 1, 15),'XXXXXXXXXXXXXXX'), $primeDivisors[1])) + $partitionOffsets[1]
+            WHEN 2 THEN ABS(MOD(TO_NUMBER(SUBSTR("_fivetran_id", 1, 15),'XXXXXXXXXXXXXXX'), $primeDivisors[2])) + $partitionOffsets[2]
             END AS "_teleport_cell_index",
         #to_number_columns()
-    FROM (SELECT DISTINCT #columns()
-          FROM $table
-         ),
+    FROM TEMP_$table,
          (SELECT 0 as "_teleport_hash_index" from dual UNION ALL SELECT 1 from dual UNION ALL SELECT 2 from dual)
 #end
 

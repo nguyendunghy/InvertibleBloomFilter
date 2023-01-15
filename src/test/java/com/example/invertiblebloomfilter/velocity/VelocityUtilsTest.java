@@ -75,6 +75,16 @@ public class VelocityUtilsTest {
         Assert.assertNotNull(ibfQuery);
     }
 
+    @Test
+    void testCreateTempTable() {
+        TableRef tableRef = new TableRef("JOHN", "IBF_DATA");
+        OracleColumnInfo[] columns = buildColumns(tableRef).toArray(new OracleColumnInfo[]{});
+        String ibfQuery = VelocityUtils.generateIBFQuery("oracle_ibf.sql.vm", tableRef,
+                columns, new long[]{37, 41, 47},"createTempTable");
+
+        System.out.println(ibfQuery);
+        Assert.assertNotNull(ibfQuery);
+    }
 
     @Test
     void testOracleRetrieveSqlGeneration() {
